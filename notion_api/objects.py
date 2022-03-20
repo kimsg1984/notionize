@@ -2,11 +2,13 @@
 notion objects
 
 """
+from functools import wraps as _wraps
+import pprint as _pprint
 
 from notion_api.http_request import HttpRequest
-from functools import wraps as _wraps
-
 from collections.abc import MutableMapping
+from collections import UserDict
+
 
 
 
@@ -163,29 +165,29 @@ class DatabasePropertyMultiSelectObject(_DatabasePropertyObject):
     # select = DatabaseChildPropertySelectObject()
 
 
-class DatabasePropertiesProperty(MutableProperty, MutableMapping):
+class DatabasePropertiesProperty(MutableProperty, UserDict):
     """
     Specific object for Properties of Database.
     It has 'update point' when property is 'set'(or 'deleted') as a item of this.
     """
 
     def __init__(self):
-        self.__notion_properties_dict: dict = None
+        self.data: dict = None
 
     def __get__(self, obj, objtype=None):
-        return self.__notion_properties_dict
+        return self
 
     def __repr__(self):
-        return str()
+        return str(_pprint.pformat(self.data))
 
     def __set__(self, obj, value):
         # TODO: should parse each element to proper object and store
-        if self.__notion_properties_dict is None:
-            self.__notion_properties_dict = dict()
+        if self.data is None:
+            self.data = dict()
             for k, v in value.items():
                 print(v['type'])
-                self.__notion_properties_dict[k] = v
-            setattr(obj, self.private_name, self.__notion_properties_dict[k])
+                self.data[k] = v
+            setattr(obj, self.private_name, self.data[k])
 
         # TODO: check 'dictionay' object and update directly.
         else:
@@ -193,23 +195,13 @@ class DatabasePropertiesProperty(MutableProperty, MutableMapping):
 
     # Implement MutableMapping method
 
-    def __getitem__(self, key):
-        return self.__notion_properties_dict[key]
-
     def __setitem__(self, key, value):
         # store and update it.
-        self.__notion_properties_dict[key] = value
+        self.data[key] = value
 
     def __delitem__(self, key):
         # remove and update it.
-        del self.__notion_properties_dict[key]
-
-    def __iter__(self):
-        return iter(self.__notion_properties_dict)
-
-    def __len__(self):
-        return len(self.__notion_properties_dict)
-
+        del self.data[key]
 
 # Class for Notion
 
