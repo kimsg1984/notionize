@@ -6,6 +6,10 @@ notion objects
 from notion_api.http_request import HttpRequest
 from functools import wraps as _wraps
 
+from collections.abc import MutableMapping
+
+
+
 
 def _from_rich_text_array_to_plain_text(array):
     return ''.join([e['plain_text'] for e in array])
@@ -72,6 +76,7 @@ class MutableProperty(ImmutableProperty):
 
 
 # Class for Database
+# https://developers.notion.com/reference/property-object
 class TitleProperty(MutableProperty):
     """
     Specific object for title of database.
@@ -94,35 +99,42 @@ class TitleProperty(MutableProperty):
             value = _from_plain_text_to_rich_text_array(value)
         super().__set__(obj, value)
 
-'''
+
 class _DatabasePropertyObject:
     """
     Basic Object for Data Properties.
     """
+    # to find which object is proper, uses '_type_defined' while assigning event.
+    _type_defined = ''
     id = ImmutableProperty()
     type = MutableProperty()
     name = MutableProperty()
 
 
-class TitleDatabasePropertyObject:
+class DatabasePropertyTitleObject(_DatabasePropertyObject):
+    _type_defined = 'title'
     title = TitleProperty()
 
 
-class TextDatabasePropertyObject:
+class DatabasePropertyTextObject(_DatabasePropertyObject):
+    _type_defined = 'rich_text'
     rich_text = MutableProperty()
-    # asdf
 
 
-class _DatabaseSubPropertyObject:
+class _DatabaseChildPropertyObject:
+    """
+    Some property has child property.
+    example) number.format
+    """
     def _update(self):
         pass
 
 
-class DatabaseSubPropertyNumberObject(_DatabaseSubPropertyObject):
+class DatabaseChildPropertyNumberObject(_DatabaseChildPropertyObject):
     format = MutableProperty()
 
 
-class NumberDatabasePropertyObject:
+class DatabasePropertyNumberObject(_DatabasePropertyObject):
     """
     It has additional property 'number' which has only sub property 'format'.
     available type of format:
@@ -131,37 +143,73 @@ class NumberDatabasePropertyObject:
         new_taiwan_dollar, danish_krone, zloty, baht, forint, koruna, shekel, chilean_peso, philippine_peso, dirham,
         colombian_peso, riyal, ringgit, leu, argentine_peso, uruguayan_peso.
     """
-
-    number = DatabaseSubPropertyNumberObject()
-
-
-class DatabaseSubPropertySelectObject(_DatabaseSubPropertyObject):
-    format = MutableProperty()
+    _type_defined = 'number'
+    number = DatabaseChildPropertyNumberObject()
 
 
-class DatabasePropertiesProperty(MutableProperty):
+class DatabaseChildPropertySelectObject(_DatabaseChildPropertyObject):
+    name = MutableProperty()
+    id = ImmutableProperty()
+    color = MutableProperty()
+
+
+class DatabasePropertySelectObject(_DatabasePropertyObject):
+    _type_defined = 'select'
+    select = DatabaseChildPropertySelectObject()
+
+class DatabasePropertyMultiSelectObject(_DatabasePropertyObject):
+    _type_defined = 'multi_select'
+
+    # select = DatabaseChildPropertySelectObject()
+
+
+class DatabasePropertiesProperty(MutableProperty, MutableMapping):
     """
     Specific object for Properties of Database.
+    It has 'update point' when property is 'set'(or 'deleted') as a item of this.
     """
 
-    def create_property(self):
-        raise NotImplemented
-
-    def delete_property(self, property_name:str):
-        raise NotImplemented
+    def __init__(self):
+        self.__notion_properties_dict: dict = None
 
     def __get__(self, obj, objtype=None):
-        return self
+        return self.__notion_properties_dict
+
+    def __repr__(self):
+        return str()
 
     def __set__(self, obj, value):
+        # TODO: should parse each element to proper object and store
+        if self.__notion_properties_dict is None:
+            self.__notion_properties_dict = dict()
+            for k, v in value.items():
+                print(v['type'])
+                self.__notion_properties_dict[k] = v
+            setattr(obj, self.private_name, self.__notion_properties_dict[k])
 
-        if not self._check_assigned(obj):
-            setattr(obj, self.private_name, value)
+        # TODO: check 'dictionay' object and update directly.
         else:
             obj._update(self.public_name, value)
-            # Mutable Property does not need to assign with 'setattr' function. '_update' method will
-            # generate 'new instance' with 'updated data' and replace the whole namespace of current instance.
-'''
+
+    # Implement MutableMapping method
+
+    def __getitem__(self, key):
+        return self.__notion_properties_dict[key]
+
+    def __setitem__(self, key, value):
+        # store and update it.
+        self.__notion_properties_dict[key] = value
+
+    def __delitem__(self, key):
+        # remove and update it.
+        del self.__notion_properties_dict[key]
+
+    def __iter__(self):
+        return iter(self.__notion_properties_dict)
+
+    def __len__(self):
+        return len(self.__notion_properties_dict)
+
 
 # Class for Notion
 
@@ -199,6 +247,7 @@ class _NotionObject(object):
 
 class Database(_NotionObject):
     title = TitleProperty()
+    properties = DatabasePropertiesProperty()
 
     _api_url = 'v1/databases/'
 
@@ -255,9 +304,8 @@ class Database(_NotionObject):
 
     def _update(self, property, contents):
         url = self._api_url + self.id
-        print(self.id, {property: contents})
         request, data = self._request.patch(url, {property: contents})
-        print(data)
+        # update property of object using 'id' value.
         type(self)(request, data, key=data['id'])
 
     def __repr__(self):
