@@ -11,7 +11,7 @@ import logging
 
 from notion_api import settings
 
-logger = logging.getLogger(__name__)
+_logger = logging.getLogger(__name__)
 
 
 class HttpRequestError(Exception):
@@ -20,13 +20,14 @@ class HttpRequestError(Exception):
 
 class HttpRequest:
 
-    def __init__(self, secret_key):
+    def __init__(self, secret_key, timeout=15):
         self.base_url = settings.BASE_URL
         self.__headers = {
             'Authorization': 'Bearer ' + secret_key,
             'Content-Type': 'application/json',
             'Notion-Version': settings.NOTION_VERSION
         }
+        self.timeout = timeout
 
     def post(self, url, payload):
         return self._request('POST', url, payload)
@@ -46,12 +47,15 @@ class HttpRequest:
         :param payload:
         :return: python data type object(dictionay and list)
         """
-        logger.debug('url: ' + self.base_url + url)
-        logger.debug('payload:' + str(payload))
+        _logger.debug('url: ' + self.base_url + url)
+        _logger.debug('payload:' + str(payload))
         payload_json = ''
         if payload:
             payload_json = json.dumps(payload)
-        result = requests.request(request_type, self.base_url + url, headers=self.__headers, data=payload_json).text
+
+        result = requests.request(request_type, self.base_url + url, headers=self.__headers, data=payload_json,
+                                  timeout=self.timeout).text
+
         result = json.loads(result)
         if result['object'] == 'error':
             status = result['status']

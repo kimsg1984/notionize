@@ -4,11 +4,11 @@ database query filter and sorts
 
 :: example ::
 
-from filter import filter
-from filter import filter_text
+from query import filter
+from query import filter_text
 
-from filter import sorts
-from filter import sort_by_timestamp
+from query import sorts
+from query import sort_by_timestamp
 
 
 condition_title = filter_text(filter_text.TYPE_TITLE)
@@ -64,9 +64,24 @@ class filter:
 
     def __init__(self, compound: object = OR) -> object:
         """
+        filter object
 
         Args:
             compound: 'filter.OR' or 'filter.AND' (default: OR)
+
+        example:
+
+            from query import filter
+            from query import filter_text
+
+            from query import sorts
+            from query import sort_by_timestamp
+
+
+            condition_title = filter_text(filter_text.TYPE_TITLE)
+            condition_title.contains('Some Title')
+            db_filter = filter()
+            db_filter.add(condition_title)
         """
         self.compound = compound
         self._body = {compound: []}
@@ -145,11 +160,15 @@ class sort_by_property(_SortObject):
 class _FilterConditionABC(metaclass=abc.ABCMeta):
 
     def __init__(self, property_type, property_name):
+
         self._body = {
             'property': property_name,
             property_type: dict()
         }
         self._property_type = property_type
+
+
+class _FilterConditionEmpty(_FilterConditionABC):
 
     def is_empty(self):
         self._body[self._property_type]['is_empty'] = True
@@ -165,6 +184,7 @@ class _FilterConditionEquals(_FilterConditionABC):
     def equals(self, value):
         pass
 
+    @abc.abstractmethod
     def does_not_equal(self, value):
         pass
 
@@ -174,12 +194,14 @@ class _FilterConditionContains(_FilterConditionABC):
     def contains(self, value):
         pass
 
+    @abc.abstractmethod
     def does_not_contain(self, value):
         pass
 
 
 class filter_text(_FilterConditionEquals,
-                  _FilterConditionContains):
+                  _FilterConditionContains,
+                  _FilterConditionEmpty):
     """
     Text Filter Condition
 
@@ -222,23 +244,19 @@ class filter_text(_FilterConditionEquals,
 
     def equals(self, string: str):
         """
-
         Args:
             string: case sensitive
         Returns:
-
         """
         self._body[self._property_type]['equals'] = string
         return self
 
     def does_not_equal(self, string: str):
         """
-
         Args:
             string: case sensitive
 
         Returns:
-
         """
         self._body[self._property_type]['does_not_equal'] = string
         return self
@@ -281,18 +299,16 @@ class filter_text(_FilterConditionEquals,
 
     def ends_with(self, string: str):
         """
-
         Args:
             string: case sensitive
 
         Returns:
-
         """
         self._body[self._property_type]['ends_with'] = string
         return self
 
 
-class filter_number(_FilterConditionEquals):
+class filter_number(_FilterConditionEquals, _FilterConditionEmpty):
 
     def __init__(self, property_name: str):
         """
@@ -411,3 +427,195 @@ class filter_checkbox(_FilterConditionEquals):
         self._body[self._property_type]['does_not_equal'] = boolean
         return self
 
+
+class filter_select(_FilterConditionEquals, _FilterConditionEmpty):
+
+    def __init__(self, property_name: str):
+        """
+        initialize
+        Args:
+            property_name:
+        """
+
+        super().__init__('select', property_name)
+
+    def equals(self, option: str):
+        """
+
+        Args:
+            option: str
+
+        Returns:
+
+        """
+        self._body[self._property_type]['equals'] = option
+        return self
+
+    def does_not_equal(self, option: str):
+        """
+
+        Args:
+            option: str
+
+        Returns:
+
+        """
+        self._body[self._property_type]['does_not_equal'] = option
+        return self
+
+
+class filter_multi_select(_FilterConditionContains, _FilterConditionEmpty):
+
+    def __init__(self, property_name: str):
+        """
+        initialize
+        Args:
+            property_name:
+        """
+
+        super().__init__('multi_select', property_name)
+
+    def contains(self, option: str):
+        """
+
+        Args:
+            option: case sensitive
+
+        Returns:
+
+        """
+        self._body[self._property_type]['contains'] = option
+        return self
+
+    def does_not_contain(self, option: str):
+        """
+
+        Args:
+            option: case sensitive
+
+        Returns:
+
+        """
+        self._body[self._property_type]['does_not_contain'] = option
+        return self
+
+
+class filter_date(_FilterConditionEmpty):
+
+    def __init__(self, property_type: str, property_name: str, timezone: str=''):
+        """
+
+        date filter requires 'timezone'. You should tail after 'datetime' like "2021-10-15T12:00:00+09:00" or
+        use the 'timezone' parameter. If 'timezone' set, filter checks your 'datetime' argument with 'timezone' or
+        not and tail it.
+
+        :param property_type: 'date', 'created_time', 'last_edited_time'
+        :param property_name: $property_name
+        :param timezone: '09:00', '+03:00', '-02:00'
+        """
+
+        TYPE_DATE = 'date'
+        TYPE_CREATED_TIME = 'created_time'
+        TYPE_LAST_EDITED_TIME = 'last_edited_time'
+
+        self.time_zone = ''
+        if timezone:
+            if timezone[0] in ['+', '-']:
+                self.time_zone = timezone
+
+            else:
+                self.time_zone = '+' + timezone
+        super().__init__(property_type, property_name)
+
+    def equals(self, datetime: str):
+        """
+        Args:
+            datetime: string(ISO 8601 date)
+        Returns:
+
+        Usage:
+        filter_dt.equals("2021-05-10")
+        filter_dt.equals("2021-05-10T12:00:00")
+        filter_dt.equals("2021-10-15T12:00:00-07:00")
+        filter_dt = filter_date(filter_date.TYPE_TEXT, 'date_column_name', time_zone='+09:00')
+        """
+
+        if self.time_zone and len(datetime) < 10 and datetime[-6] not in ['+', '-']:
+            datetime += self.time_zone
+        self._body[self._property_type]['equals'] = datetime
+        return self
+
+    def equals(self, datetime: str):
+        """
+        Args:
+            datetime: string(ISO 8601 date.  "2021-05-10"  or "2021-05-10T12:00:00" or "2021-10-15T12:00:00-07:00")
+        Returns:
+
+        """
+
+        if self.time_zone and 11 < len(datetime) and datetime[-6] not in ['+', '-']:
+            datetime += self.time_zone
+
+        self._body[self._property_type]['equals'] = datetime
+        return self
+
+    def before(self, datetime: str):
+        """
+        Args:
+            datetime: string(ISO 8601 date.  "2021-05-10"  or "2021-05-10T12:00:00" or "2021-10-15T12:00:00-07:00")
+        Returns:
+        """
+        if self.time_zone and len(datetime) < 10 and datetime[-6] not in ['+', '-']:
+            datetime += self.time_zone
+        self._body[self._property_type]['before'] = datetime
+
+
+    def after(self, datetime: str):
+        """
+        Args:
+            datetime: string(ISO 8601 date.  "2021-05-10"  or "2021-05-10T12:00:00" or "2021-10-15T12:00:00-07:00")
+        Returns:
+        """
+        if self.time_zone and len(datetime) < 10 and datetime[-6] not in ['+', '-']:
+            datetime += self.time_zone
+        self._body[self._property_type]['after'] = datetime
+
+
+    def on_or_before(self, datetime: str):
+        """
+        Args:
+            datetime: string(ISO 8601 date.  "2021-05-10"  or "2021-05-10T12:00:00" or "2021-10-15T12:00:00-07:00")
+        Returns:
+        """
+        if self.time_zone and len(datetime) < 10 and datetime[-6] not in ['+', '-']:
+            datetime += self.time_zone
+        self._body[self._property_type]['on_or_before'] = datetime
+
+
+    def on_or_after(self, datetime: str):
+        """
+        Args:
+            datetime: string(ISO 8601 date.  "2021-05-10"  or "2021-05-10T12:00:00" or "2021-10-15T12:00:00-07:00")
+        Returns:
+        """
+        if self.time_zone and len(datetime) < 10 and datetime[-6] not in ['+', '-']:
+            datetime += self.time_zone
+        self._body[self._property_type]['on_or_after'] = datetime
+
+    def past_week(self):
+        raise NotImplementedError
+
+    def past_month(self):
+        raise NotImplementedError
+
+    def past_year(self):
+        raise NotImplementedError
+
+    def next_week(self):
+        raise NotImplementedError
+
+    def next_month(self):
+        raise NotImplementedError
+
+    def next_year(self):
+        raise NotImplementedError
