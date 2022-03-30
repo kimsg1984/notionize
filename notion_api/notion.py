@@ -30,8 +30,8 @@ class Notion:
         https://www.notion.so/myworkspace/a8aec43384f447ed84390e8e42c2e089?v=...
                                          |---------- Database ID --------|
         """
-
-        return Database(*self._request.get('v1/databases/' + database_id))
+        result = self._request.get('v1/databases/' + database_id)
+        return Database(*result)
 
     def get_page(self, page_id):
         return Page(*self._request.get('v1/pages/' + page_id))
