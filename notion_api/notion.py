@@ -4,13 +4,13 @@ Notion API
 
 """
 
+import logging as _logging
+_log = _logging.getLogger(__name__)
+_logging.basicConfig(format='%(asctime)s [%(filename)s:%(lineno)s|%(levelname)s] %(funcName)s(): %(message)s')
+
 from notion_api.http_request import HttpRequest
 from notion_api.objects import Database
 from notion_api.objects import Page
-
-import logging
-
-logger = logging.getLogger(__name__)
 
 
 class Notion:
