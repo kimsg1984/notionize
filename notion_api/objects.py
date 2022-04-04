@@ -37,7 +37,7 @@ def _notion_object_init_handler(init_function):
 
     @_wraps(init_function)
     def wrapper_function(*args, **kwargs):
-        if 'key' not in kwargs:
+        if 'instance_id' not in kwargs:
             return init_function(*args, **kwargs)
 
     return wrapper_function
@@ -55,9 +55,13 @@ def _set_proper_descriptor(cls, key, value):
     if type(value) in [str, bool, int, float] or (value is None):
         setattr(cls, key, ImmutableProperty(cls, key))
 
+    elif key == 'rich_text':
+        obj = RichTextProperty(cls, key)
+        _log.debug(f"rich_text, {value}")
+        setattr(cls, key, obj)
+
     elif type(value) == dict:
         obj = ObjectProperty(cls, key)
-
         setattr(cls, key, obj)
 
     elif type(value) == list:
@@ -65,7 +69,6 @@ def _set_proper_descriptor(cls, key, value):
         setattr(cls, key, obj)
     else:
         raise NotionApiPropertyException(f"could not assign proper descriptor: '{type(value)}'")
-        # setattr(cls, key, value)
 
 
 def _get_proper_object(key, value: object, parent):
@@ -102,11 +105,11 @@ def _get_proper_object(key, value: object, parent):
 
 
 def _from_rich_text_array_to_plain_text(array):
-    return ''.join([e['plain_text'].replace(u'\xa0', u'') for e in array])
+    return ' '.join([e['plain_text'].replace(u'\xa0', u' ') for e in array])
 
 
 def _from_plain_text_to_rich_text_array(string):
-    return [{"text": {"content": string}, 'plain_text':string}]
+    return [{"text": {"content": string}, 'plain_text': string}]
 
 
 def _pdir(obj, level='public'):
@@ -188,6 +191,9 @@ class _ListObject(_MutableSequence):
         if data:
             self.__set__(owner, data)
 
+    def __repr__(self):
+        return f"<'{self.__class__.__name__}(list_type{'-mutable' if self._mutable else ''})' at {hex(id(self))}>"
+
     def __get__(self, obj, objtype=None):
         return self
 
@@ -207,7 +213,7 @@ class _ListObject(_MutableSequence):
             proper_obj = _get_proper_object(self.name, e, self)
             self._data.append(proper_obj)
 
-        mutable_status = mutable_status
+        self._mutable = mutable_status
 
     def __delitem__(self, index):
         del self._data[index]
@@ -215,19 +221,16 @@ class _ListObject(_MutableSequence):
     def __getitem__(self, index):
         return self._data[index]
 
-    def __len__(self):
-        return len(self._data)
-
     def __setitem__(self, index, value):
         assert len(self._data) <= index, 'IndexError: list assignment index out of range'
         self._data[index] = value
 
+    def __len__(self):
+        return len(self._data)
+
     def insert(self, index, value):
         assert len(self._data) == index, 'Insert Event does not permit'
         self._data.append(value)
-
-    def __repr__(self):
-        return f"<'{self.__class__.__name__}(list_type{'-mutable' if self._mutable else ''})' at {hex(id(self))}>"
 
 
 class _DictionaryObject(_MutableMapping):
@@ -380,7 +383,6 @@ class _NotionObject(object):
 
         # value assignment event
         for k, v in data.items():
-            # _log.debug(f"{self}, {k}, {v}")
             setattr(self, k, v)
 
     def __str__(self):
@@ -456,6 +458,11 @@ class ArrayProperty(ImmutableProperty):
         super().__set__(owner, obj)
 
 
+class RichTextProperty(ArrayProperty):
+    def __set__(self, owner, value: dict):
+        ImmutableProperty.__set__(self, owner, value)
+
+
 class PropertiesProperty(_DictionaryObject, ImmutableProperty):
     """
     'PropertiesProperty' for 'Database' and 'Page'. Mutable Type
@@ -480,7 +487,7 @@ class PropertiesProperty(_DictionaryObject, ImmutableProperty):
     @property
     def _data(self):
         """
-        To make it as descriptor, override '_data' property.
+        override '_data' property to be a descriptor.
         :return:
         """
         return getattr(self._parent, self.private_name)
@@ -505,17 +512,16 @@ class PropertiesProperty(_DictionaryObject, ImmutableProperty):
 
         for k, v in value.items():
             if v['type'] in properties_mapper:
-                property_cls: _DbPropertyObject = properties_mapper.get(v['type'])
-                property_ins: _DbPropertyObject = property_cls(self, v, parent_type=self._parent_object_type)
+                property_cls: _PropertyObject = properties_mapper.get(v['type'])
+                property_ins: _PropertyObject = property_cls(self, v, parent_type=self._parent_object_type)
             else:
                 if self._parent_object_type == 'database':
                     # _log.debug(f"self, v: {self}, {v}")
                     property_ins: _DbPropertyObject = _DbPropertyObject(self, v, parent_type=self._parent_object_type, force_new=True)
 
                 elif self._parent_object_type == 'page':
-                    property_ins: _DbPropertyObject = _PagePropertyObject(self, v, parent_type=self._parent_object_type,
+                    property_ins: _PagePropertyObject = _PagePropertyObject(self, v, parent_type=self._parent_object_type,
                                                                         force_new=True)
-
             self.__setitem__(k, property_ins)
         self._mutable = mutable_status
 
@@ -587,7 +593,8 @@ class _PagePropertyObject(_PropertyObject):
     """
     Basic Object for Data and Page Properties.
     """
-    # to find which object is proper, uses '_type_defined' while assigning event.
+
+    # to figure out which object is 'proper', uses '_type_defined' while assigning event.
     _type_defined = ''
 
     def _update(self, property_name, data):
@@ -597,28 +604,148 @@ class _PagePropertyObject(_PropertyObject):
 
         value = getattr(self, self.type)
         if isinstance(value, dict):
-
-            return value['name'].replace(u'\xa0', u'')
-        elif isinstance(value, list):
-            return [e['name'].replace(u'\xa0', u'') for e in value]
+            return value['name'].replace(u'\xa0', u' ')
+        elif isinstance(value, (list, _ListObject)):
+            return tuple([e['name'].replace(u'\xa0', u' ') for e in value])
         else:
             return value
 
 
+class PagePropertyPhoneNumber(_PagePropertyObject):
+    """
+    'PagePropertyPhoneNumber'
+    """
+    _type_defined = 'phone_number'
+    phone_number = MutableProperty()
+
+
+class PagePropertySelect(_PagePropertyObject):
+    """
+    'PagePropertySelect'
+    """
+    _type_defined = 'select'
+
+
+class PagePropertyCreatedTime(_PagePropertyObject):
+    """
+    'PagePropertyCreatedTime'
+    """
+    _type_defined = 'created_time'
+
+
+class PagePropertyCreatedBy(_PagePropertyObject):
+    """
+    'PagePropertyCreatedBy'
+    """
+    _type_defined = 'created_by'
+
+
+class PagePropertyRollup(_PagePropertyObject):
+    """
+    'PagePropertyRollup'
+    """
+    _type_defined = 'rollup'
+
+
+class PagePropertyPeople(_PagePropertyObject):
+    """
+    'PagePropertyPeople'
+    """
+    _type_defined = 'people'
+
+
+class PagePropertyMultiSelect(_PagePropertyObject):
+    """
+    'PagePropertyMultiSelect'
+    """
+    _type_defined = 'multi_select'
+
+
+class PagePropertyNumber(_PagePropertyObject):
+    """
+    'PagePropertyNumber'
+    """
+    _type_defined = 'number'
+    number = MutableProperty()
+
+
+class PagePropertyLastEditedBy(_PagePropertyObject):
+    """
+    'PagePropertyLastEditedBy'
+    """
+    _type_defined = 'last_edited_by'
+
+
+class PagePropertyCheckbox(_PagePropertyObject):
+    """
+    'PagePropertyCheckbox'
+    """
+    _type_defined = 'checkbox'
+    checkbox = MutableProperty()
+
+
 class PagePropertyEmail(_PagePropertyObject):
+    """
+    'PagePropertyEmail'
+    """
     _type_defined = 'email'
+    email = MutableProperty()
 
 
-class PagePropertyText(_PagePropertyObject):
+class PagePropertyRichText(_PagePropertyObject):
+    """
+    'PagePropertyRichText'
+    """
     _type_defined = 'rich_text'
 
     def get_value(self):
+        """
+        parse 'rich_text' to plain 'string' and return
+        """
         return _from_rich_text_array_to_plain_text(self.rich_text)
 
 
-class PagePropertyTitle(_PagePropertyObject):
-    _type_defined = 'title'
-    title = TitleProperty()
+class PagePropertyUrl(_PagePropertyObject):
+    """
+    'PagePropertyUrl'
+    """
+    _type_defined = 'url'
+    url = MutableProperty()
+
+
+class PagePropertyLastEditedTime(_PagePropertyObject):
+    """
+    'PagePropertyLastEditedTime'
+    """
+    _type_defined = 'last_edited_time'
+
+
+class PagePropertyFormula(_PagePropertyObject):
+    """
+    'PagePropertyFormula'
+    """
+    _type_defined = 'formula'
+
+
+class PagePropertyRelation(_PagePropertyObject):
+    """
+    'PagePropertyRelation'
+    """
+    _type_defined = 'relation'
+
+
+class PagePropertyDate(_PagePropertyObject):
+    """
+    'PagePropertyDate'
+    """
+    _type_defined = 'date'
+
+
+class PagePropertyFiles(_PagePropertyObject):
+    """
+    'PagePropertyFiles'
+    """
+    _type_defined = 'files'
 
 
 """
@@ -646,79 +773,6 @@ class _DbPropertyObject(_PropertyObject):
 
 class DbPropertyEmail(_DbPropertyObject):
     _type_defined = 'email'
-
-
-class Database(_NotionBasicObject):
-
-    _api_url = 'v1/databases/'
-
-    id = ImmutableProperty()
-    created_time = ImmutableProperty()
-    title = TitleProperty()
-    icon = MutableProperty()
-    cover = MutableProperty()
-
-    properties = PropertiesProperty(object_type='database')
-
-    @_notion_object_init_handler
-    def __init__(self, request, data):
-        """
-        initilize Database instance.
-
-        Args:
-            request: Notion._request
-            data: returned from ._request
-        """
-
-        object_type = data['object']
-
-
-        assert object_type == 'database', f"data type is not 'database'. (type: {object_type})"
-
-        self._request = request
-
-        _log.debug(" ".join(map(str, ('Database:', self))))
-        super().__init__(request, data)
-
-    def _update(self, property_name, contents):
-        url = self._api_url + self.id
-        request, data = self._request.patch(url, {property_name: contents})
-        # update property of object using 'id' value.
-        _log.debug(f"{type(self).__init__}")
-        type(self)(request, data, key=data['id'])
-
-    def query(self, filter=None, sorts=None,
-              start_cursor=None, page_size=None):
-        """
-        Args:
-            filter: query.filter
-            sorts: query.sorts
-            start_cursor: string
-            page_size: int (Max:100)
-
-        Returns: 'pages iterator'
-
-        """
-        if filter:
-            filter = filter._body
-        else:
-            filter = {'or':[]}
-
-        if sorts:
-           sorts = dict(sorts._body)
-        else:
-            sorts = []
-
-        payload = dict()
-        payload['filter'] = filter
-        payload['sorts'] = sorts
-
-        if page_size:
-            payload['page_size'] = page_size
-
-        id_raw = self.id.replace('-', '')
-        url = f'{self._api_url}{id_raw}/query'
-        return QueriedPageIterator(self._request, url, payload)
 
 
 class QueriedPageIterator:
@@ -782,6 +836,133 @@ class QueriedPageIterator:
                 raise StopIteration
 
 
+class Database(_NotionBasicObject):
+
+    _api_url = 'v1/databases/'
+
+    id = ImmutableProperty()
+    created_time = ImmutableProperty()
+    title = TitleProperty()
+    icon = MutableProperty()
+    cover = MutableProperty()
+
+    properties = PropertiesProperty(object_type='database')
+
+    @_notion_object_init_handler
+    def __init__(self, request, data):
+        """
+        initilize Database instance.
+
+        Args:
+            request: Notion._request
+            data: returned from ._request
+        """
+
+        object_type = data['object']
+        assert object_type == 'database', f"data type is not 'database'. (type: {object_type})"
+        self._request = request
+
+        _log.debug(" ".join(map(str, ('Database:', self))))
+        super().__init__(request, data)
+
+    def _update(self, property_name, contents):
+        url = self._api_url + self.id
+        request, data = self._request.patch(url, {property_name: contents})
+        # update property of object using 'id' value.
+        _log.debug(f"{type(self).__init__}")
+        type(self)(request, data, instance_id=data['id'])
+
+    def query(self, filter=None, sorts=None,
+              start_cursor=None, page_size=None):
+        """
+        Args:
+            filter: query.filter
+            sorts: query.sorts
+            start_cursor: string
+            page_size: int (Max:100)
+
+        Returns: 'pages iterator'
+
+        """
+        if filter:
+            filter = filter._body
+        else:
+            filter = {'or':[]}
+
+        if sorts:
+           sorts = dict(sorts._body)
+        else:
+            sorts = []
+
+        payload = dict()
+        payload['filter'] = filter
+        payload['sorts'] = sorts
+
+        if page_size:
+            payload['page_size'] = page_size
+
+        id_raw = self.id.replace('-', '')
+        url = f'{self._api_url}{id_raw}/query'
+        return QueriedPageIterator(self._request, url, payload)
+
+    def get_as_tuples(self, queried_page_iterator: QueriedPageIterator, columns_select: list=[], header=True):
+        """
+        change QueriedPageIterator as simple values.
+        :param queried_page_iterator: QueriedPageIterator()
+        :param columns_select: ('column_name1', 'column_name2'...)
+        :return: tuple(('title1', 'title2'...), (value1, value2,...)... )
+
+        Usage:
+
+        database.get_tuples(database.query())
+        database.get_tuples(database.query(), ('column_name1', 'column_name2'), header=False)
+        """
+        result = list()
+
+        if columns_select:
+            keys = tuple(columns_select)
+        else:
+            keys = (*self.properties.keys(),)
+
+        for page in queried_page_iterator:
+            values = page.get_properties()
+            result.append(tuple([values[k] for k in keys]))
+        if not result:
+            return tuple()
+
+        if header:
+            result = [keys] + result
+
+        return tuple(result)
+
+    def get_as_dictionaries(self, queried_page_iterator: QueriedPageIterator, columns_select: list=[]):
+        """
+        change QueriedPageIterator as simple values.
+        :param queried_page_iterator: QueriedPageIterator()
+        :param columns_select: ('column_name1', 'column_name2'...)
+        :return: dict(('key1': 'value1', 'key2': 'value2'...), ... )
+
+        Usage:
+
+        database.get_tuples(database.query())
+        database.get_tuples(database.query(), ('column_name1', 'column_name2'), header=False)
+        """
+        result = list()
+
+        if columns_select:
+            keys = tuple(columns_select)
+        else:
+            keys = (*self.properties.keys(),)
+
+        for page in queried_page_iterator:
+            values = page.get_properties()
+            result.append({k: values[k] for k in keys})
+        if not result:
+            return tuple()
+
+        return tuple(result)
+
+
 class Page(_NotionBasicObject):
     """
     Page Object
@@ -814,7 +995,7 @@ class Page(_NotionBasicObject):
         """
         result = dict()
         for k, v in self.properties.items():
-            v: _DbPropertyObject
+            v: _PagePropertyObject
             result[k] = v.get_value()
 
         return result

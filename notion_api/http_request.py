@@ -57,6 +57,7 @@ class HttpRequest:
                                   timeout=self.timeout).text
 
         result = json.loads(result)
+        _logger.debug(f"result: {result}")
         if result['object'] == 'error':
             status = result['status']
             code = result['code']
