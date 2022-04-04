@@ -20,8 +20,8 @@ from functools import wraps as _wraps
 import pprint as _pprint
 
 from notion_api.http_request import HttpRequest
-from collections import UserDict as _UserDict
 from collections.abc import MutableSequence as _MutableSequence
+from collections.abc import MutableMapping as _MutableMapping
 
 import logging
 
@@ -52,19 +52,21 @@ def _set_proper_descriptor(cls, key, value):
     :param value:
     :return:
     """
-
-    if type(value) in [str, bool, None, int, float]:
+    # TODO: change Object to Descriptor
+    if type(value) in [str, bool, int, float] or (value is None):
         setattr(cls, key, ImmutableProperty(cls, key))
 
     elif type(value) == dict:
-        dict_obj = _DictionaryObject(key, cls)
-        setattr(cls, key, dict_obj)
+        obj = ObjectProperty(cls, key)
+
+        setattr(cls, key, obj)
 
     elif type(value) == list:
-        list_obj = _ListObject(key, cls)
-        return list_obj
+        obj = ArrayProperty(cls, key)
+        setattr(cls, key, obj)
     else:
-        setattr(cls, key, value)
+        raise NotionApiPropertyException(f"could not assign proper descriptor: '{type(value)}'")
+        # setattr(cls, key, value)
 
 
 def _get_proper_object(key, value: object, parent):
@@ -78,7 +80,6 @@ def _get_proper_object(key, value: object, parent):
     :param value:
     :return:
     """
-    # _log.debug(f"key, value: object, parent, {key}, {value}, {parent}")
     # check parent has descriptor.
     if hasattr(parent, key):
         try:
@@ -91,6 +92,7 @@ def _get_proper_object(key, value: object, parent):
         return value
 
     elif type(value) == dict:
+        # _log.debug(f"key, value: object, parent: {key}, {value}, {parent}")
         dict_obj = _DictionaryObject(key, parent, data=value)
         return dict_obj
     elif type(value) == list:
@@ -144,7 +146,6 @@ class ImmutableProperty:
             self.__set_name__(owner, name)
 
     def __set_name__(self, owner, name):
-        # _log.debug(" .join((map(str, '__set_name__(self, owner, name)', self, owner, name))))
         self._parent = owner
         self.public_name = name
         self.private_name = '__property_' + name
@@ -173,55 +174,70 @@ class MutableProperty(ImmutableProperty):
     Descriptor for property with 'update' event.
     """
     def _update_event(self, obj, value):
-        # TODO: update
-        _log.debug(" ".join(map(str, ('udate: self, obj, value', self, obj, value))))
+        _log.debug(f"udate: self, obj, value {self}, {obj}, {value}")
         obj._update(self.public_name, value)
 
 
 class _ListObject(_MutableSequence):
 
     def __init__(self, name, owner, data: list=None, mutable=False):
+
         self.name = name
-        self.data = list()
-        self._parent = owner
         self._mutable = mutable
+        self._data = list()
+
         if data:
             self.__set__(owner, data)
 
-    def __delitem__(self, index):
-        del self.data[index]
-
-    def __getitem__(self, index):
-        return self.data[index]
-
-    def __len__(self):
-        return len(self.data)
-
-    def __setitem__(self, index, value):
-        assert len(self.data) <= index, 'IndexError: list assignment index out of range'
-        self.data[index] = value
-
-    def insert(self, index, value):
-        assert len(self.data) == index, 'Insert Event does not permit'
-        self.data.append(value)
+    def __get__(self, obj, objtype=None):
+        return self
 
     def __set__(self, owner, value: list):
 
         assert type(value) == list
+        # _log.debug(f"owner, value, {repr(owner)}, {repr(value)}")
 
+        if self._data:
+            raise NotionApiPropertyException("values of '_ListObject' already assigned")
+
+        mutable_status = self._mutable
+
+        self._mutable = True
         for e in value:
-            self.data.append(_get_proper_object(self.name, e, self))
+            # _log.debug(f"{e}")
+            proper_obj = _get_proper_object(self.name, e, self)
+            self._data.append(proper_obj)
 
-    def __str__(self):
-        return f"<'{self.name}' list property: {str(self.data)}>"
+        mutable_status = mutable_status
+
+    def __delitem__(self, index):
+        del self._data[index]
+
+    def __getitem__(self, index):
+        return self._data[index]
+
+    def __len__(self):
+        return len(self._data)
+
+    def __setitem__(self, index, value):
+        assert len(self._data) <= index, 'IndexError: list assignment index out of range'
+        self._data[index] = value
+
+    def insert(self, index, value):
+        assert len(self._data) == index, 'Insert Event does not permit'
+        self._data.append(value)
+
+    def __repr__(self):
+        return f"<'{self.__class__.__name__}(list_type{'-mutable' if self._mutable else ''})' at {hex(id(self))}>"
 
 
-class _DictionaryObject(_UserDict):
+class _DictionaryObject(_MutableMapping):
+
     """
-    '_DictionaryObject' which used for 'Key-Value' pettern. Imutable is 'default'.
+    '_DictionaryObject Descriptor' which used for 'Key-Value' pettern. Imutable is 'default'.
     """
 
-    def __init__(self, name, owner, data: dict=None, mutable=False):
+    def __init__(self, name, owner: '_NotionObject'=None, data: dict=None, mutable=False):
         """
         Initilize '_DictionaryObject'.
 
@@ -230,65 +246,107 @@ class _DictionaryObject(_UserDict):
         :param data: if it assigned, object doesn't need 'additianl assigning event'.
         :param mutable: bool (default: False)
         """
-        # _log.debug(f"_DictionaryObject '{name}', data: {bool(data)}")
 
         self.name = name
-        self.data = dict()
-        self._parent = owner
         self._mutable = mutable
+
+        # descriptor already has '_data' property.
+        if not issubclass(type(self), ImmutableProperty):
+            self._data = dict()
+
         if data:
             self.__set__(owner, data)
 
-    # def __str__(self):
-    #     content = ''
-    #     for k, v in self.data.items():
-    #         if 30 < len(content):
-    #             content += '...'
-    #             break
-    #         flake = ''
-    #         if content:
-    #             flake += ', '
-    #
-    #         flake += f"'{k}'"
-    #         content += flake
-    #     return f'<{self.name}: {content}>'
+    def __str__(self):
+        return f"<'{self.__class__.__name__}'>"
 
     def __repr__(self):
-        content = ''
-        # keys = ", ".join(f"'{k}'" for k in self.data.keys())
-        # return f'<{self.name}(dict_type): {keys}>'
-        return f'<DictionaryObject({self.name}) at {hex(id(self))}>'
+        return f"<'{self.__class__.__name__}(dict_type{'-mutable' if self._mutable else ''})' at {hex(id(self))}>"
 
     def __set__(self, owner, value: dict):
-        for k, v in value.items():
-            self.__setitem__(k, _get_proper_object(k, v, self))
+        """
+        Allow only first event.
+
+        :param owner:
+        :param value:
+        :return:
+        """
+        # _log.debug(f"owner, self.name, {owner}, {self.name}")
+
+
+        if not self._data:
+
+            mutable_status = self._mutable
+            self._mutable = True
+            for k, v in value.items():
+                self.__setitem__(k, _get_proper_object(k, v, self))
+            self._mutable = mutable_status
+        else:
+            _log.debug(f"{self.name}, {owner}, {self._data}")
+            raise NotionApiPropertyException(f"values of '_DictionaryObject' already assigned")
 
     # Implement MutableMapping method
-    def __setitem__(self, key, value):
-        if key.lower() == 'email':
-            _log.debug(f"{self}(parent:{self._parent}), '{key}':'{value}', attr: {key in self.data}")
-
-        if key not in self.data:
-            self.data[key] = value
-        elif self._mutable:
-            self.data[key] = value
-            # TODO: update event.
-        else:
-            raise NotionApiPropertyException('Immutable property could not be assigned')
-
-    def __delitem__(self, key):
-        if self._mutable:
-            del self.data[key]
-            # TODO: remove update event.
-        else:
-            raise NotionApiPropertyException('Immutable property could not be assigned')
 
     def __getitem__(self, key):
-        # _log.debug(f'{self.name} {key}')
-        return self.data[key]
+        return self._data[key]
+
+    def __iter__(self):
+        return iter(self._data)
+
+    def __setitem__(self, key, value):
+
+        data: dict = self._data
+
+        if not self._mutable:
+            raise NotionApiPropertyException('Immutable property could not be assigned')
+
+        if key not in data:
+            # create event
+            data[key] = value
+        else:
+            data[key] = value
+            # update event.
+
+    def __delitem__(self, key):
+
+        if self._mutable:
+            del self._data[key]
+            # remove update event.
+        else:
+            raise NotionApiPropertyException('Immutable property could not be assigned')
+
+    def __len__(self):
+        return len(self._data)
 
     def keys(self):
-        return self.data.keys()
+        return self._data.keys()
+
+
+_notion_object_class = {}
+
+
+def _create_notion_object_class(cls, mro_tuple:tuple=tuple(), namespace:dict={}, force_new=False):
+    """
+    Create new '_NotionObject' class. Check the name of 'cls'. If not exist,
+    create and return. If exists, return already created it.
+
+    :param cls: '_NotionObject' itself or 'subclass' of it.
+    :param mro_tuple: if it is defined, replace this.
+    :param namespace: if it is defined, replace this.
+    :return: new or created class.
+    """
+
+    cls_name = cls.__name__
+    if (cls_name in _notion_object_class) and (not force_new):
+        new_cls = _notion_object_class[cls_name]
+    else:
+        if not mro_tuple:
+            mro_tuple = (cls,)
+        # _log.debug(f"{cls_name} {'(force_new)' if force_new else ''}")
+        new_cls = type(cls_name, mro_tuple, namespace)
+        _notion_object_class[cls_name] = new_cls
+
+    return new_cls
 
 
 class _NotionObject(object):
@@ -296,21 +354,22 @@ class _NotionObject(object):
     '_NotionObject' which set properties as 'descriptor' or 'specific object' and assigns value.
     """
 
-    def __new__(cls, data):
+    def __new__(cls, data, force_new=False):
         """
         construct '_NotionObject' class.
 
         before assign the object and property, '__new__' method set the proper descriptors.
         :param data:
         """
-        _log.debug(f'_NotionObject: {cls}')
+        # _log.debug(f"{cls}")
+        new_cls = _create_notion_object_class(cls, force_new=force_new)
 
         for k, v in data.items():
-            if k not in dir(cls):
-                _set_proper_descriptor(cls, k, v)
+            if k not in dir(new_cls):
+                _set_proper_descriptor(new_cls, k, v)
 
-        super_cls = super(_NotionObject, cls)
-        notion_ins = super_cls.__new__(cls)
+        super_cls = super(_NotionObject, new_cls)
+        notion_ins = super_cls.__new__(new_cls)
 
         return notion_ins
 
@@ -319,13 +378,17 @@ class _NotionObject(object):
         assign object and property to instance.
         :param data:
         """
-        _log.debug(" ".join(map(str, ('_NotionObject', self))))
 
         # value assignment event
         for k, v in data.items():
-            # setattr(self, k, _get_proper_object(k, v, self))
+            # _log.debug(f"{self}, {k}, {v}")
             setattr(self, k, v)
-        _log.debug(f"_NotionObject [DONE], '{self}'")
+
+    def __str__(self):
+        return f"<'{self.__class__.__name__}'>"
+
+    def __repr__(self):
+        return f"<'{self.__class__.__name__}' at {hex(id(self))}>"
 
 
 class _NotionBasicObject(_NotionObject):
@@ -334,32 +397,31 @@ class _NotionBasicObject(_NotionObject):
     """
     _instances = {}
 
-    def __new__(cls, request, data, key: str=None):
+    def __new__(cls, request, data, instance_id: str = None):
         """
         construct '_NotionBasicObject' class.
 
         check 'key' value and if instance is exist, reuse instance with renewed namespace.
         :param request:
         :param data:
-        :param key:
+        :param instance_id:
         """
         _log.debug(" ".join(map(str, ('_NotionBasicObject:', cls))))
-        # instance = super(_NotionBasicObject, cls).__new__(cls, data)
         instance = super(_NotionBasicObject, cls).__new__(cls, data)
 
-        if key:
-            org_namespace = dict(_NotionBasicObject._instances[key].__dict__)
+        if instance_id:
+            org_namespace = dict(_NotionBasicObject._instances[instance_id].__dict__)
 
             # instance.__init__(data)
 
-            _NotionBasicObject._instances[key].__dict__ = instance.__dict__
+            _NotionBasicObject._instances[instance_id].__dict__ = instance.__dict__
             for k in set(org_namespace) - set(instance.__dict__):
                 instance.__dict__[k] = org_namespace[k]
 
         else:
-            key = data['id']
+            instance_id = data['id']
 
-            _NotionBasicObject._instances[key] = instance
+            _NotionBasicObject._instances[instance_id] = instance
 
         return instance
 
@@ -371,29 +433,35 @@ class _NotionBasicObject(_NotionObject):
         url = self._api_url + self.id
         request, data = self._request.patch(url, {property_name: contents})
         # update property of object using 'id' value.
-        type(self)(request, data, key=data['id'])
+        cls: type(_NotionBasicObject) = type(self)
+        cls(request, data, instance_id=data['id'])
 
 
-# def _set_object(ins: _NotionObject(), attr_name: str, value: object):
-#     """
-#     check
-#     :param ins: instance of '_NotionObject'
-#     :param attr_name: attribute name
-#     :param value: value to be assigned as 'attr_name'
-#     :return: None
-#     """
-#     # _get_proper_object
-#     # setattr(self, k, _get_proper_object(k, v, self))
-
-class Page:
-    pass
-
-
-class PropertiesProperty(_DictionaryObject):
+class ObjectProperty(ImmutableProperty):
     """
-    'PropertiesProperty' for 'Database' and 'Page'.
+    ObjectProperty which inherits '_NotionObject'.
     """
-    def __new__(cls, object_type:str):
+
+    def __set__(self, owner, value: dict):
+        obj = _DictionaryObject(self.public_name, owner, value)
+        super().__set__(owner, obj)
+
+
+class ArrayProperty(ImmutableProperty):
+    """
+    ObjectProperty which inherits '_NotionObject'.
+    """
+
+    def __set__(self, owner, value: dict):
+        obj = _ListObject(self.public_name, owner, value)
+        super().__set__(owner, obj)
+
+
+class PropertiesProperty(_DictionaryObject, ImmutableProperty):
+    """
+    'PropertiesProperty' for 'Database' and 'Page'. Mutable Type
+    """
+    def __new__(cls, object_type: str):
 
         super_cls = super(PropertiesProperty, cls)
         notion_ins = super_cls.__new__(cls)
@@ -407,69 +475,61 @@ class PropertiesProperty(_DictionaryObject):
         :param object_type: 'database' or 'page'.
         """
         assert object_type in ['database', 'page']
-        self._object_type = object_type
-        super().__init__('properties', self)
+        self._parent_object_type = object_type
+        super().__init__('properties')
+
+    @property
+    def _data(self):
+        """
+        To make it as descriptor, override '_data' property.
+        :return:
+        """
+        return getattr(self._parent, self.private_name)
 
     def __set__(self, owner, value: dict):
+
+        self.__set_name__(owner, self.name)
+
+        if not self._check_assigned(owner):
+            setattr(self._parent, self.private_name, dict())
+
         _log.debug(f'{self}, {owner}')
+        mutable_status = self._mutable
+        self._parent = owner
+        self._mutable = True
+        if self._parent_object_type == 'database':
+            properties_mapper = database_properties_mapper
+        elif self._parent_object_type == 'page':
+            properties_mapper = page_properties_mapper
+        else:
+            raise NotImplemented(f"'{self._parent_object_type}' object is not implemented")
+
         for k, v in value.items():
-            if self._object_type == 'database':
-                property_cls: _PropertyObject = database_properties_mapper.get(v['type'], _PropertyObject)
-                property_ins = property_cls(owner, v, object_type=self._object_type)
-                self.__setitem__(k, property_ins)
-
-            elif self._object_type == 'page':
-                property_cls: _PropertyObject = page_properties_mapper.get(v['type'], _PropertyObject)
-                property_ins = property_cls(owner, v, object_type=self._object_type)
-                self.__setitem__(k, property_ins)
+            if v['type'] in properties_mapper:
+                property_cls: _DbPropertyObject = properties_mapper.get(v['type'])
+                property_ins: _DbPropertyObject = property_cls(self, v, parent_type=self._parent_object_type)
             else:
-                raise NotImplemented(f"'{self._object_type}' object is not implemented")
+                if self._parent_object_type == 'database':
+                    # _log.debug(f"self, v: {self}, {v}")
+                    property_ins: _DbPropertyObject = _DbPropertyObject(self, v, parent_type=self._parent_object_type, force_new=True)
 
+                elif self._parent_object_type == 'page':
+                    property_ins: _DbPropertyObject = _PagePropertyObject(self, v, parent_type=self._parent_object_type,
+                                                                        force_new=True)
 
-class _PropertyObject(_NotionObject):
-    """
-    Basic Object for Data and Page Properties.
-    """
-    # to find which object is proper, uses '_type_defined' while assigning event.
-    _type_defined = ''
-
-    def __new__(cls, obj, data, object_type):
-        _log.debug(" ".join(map(str, ('_PropertyObject:', cls._type_defined))))
-
-        ins = super(_PropertyObject, cls)
-        ins.__init__(cls, data)
-
-        return ins
-
-    def __init__(self, obj, data, object_type):
-
-        self._object: _NotionObject = obj
-        self._object_type = object_type
-        _log.debug(" ".join(map(str, ('_PropertyObject:', self._type_defined))))
-
-        # Used for Page.
-
-        # for attr in data:
-        #     setattr(self, attr, data[attr])
-
-    def __repr__(self):
-        if self._object_type == 'database':
-            return f"<'{self.__class__.__name__}': '{self.name}'>"
-        elif self._object_type == 'page':
-            return f"<'{self.__class__.__name__}: {self._key}'>"
+            self.__setitem__(k, property_ins)
+        self._mutable = mutable_status
 
     def _update(self, property_name, data):
-        self._object._update('properties', {property_name: data})
+        """
+        generate 'update content' and call '_update' method of '_parent' object.
 
-    def get_value(self):
-        value = getattr(self, self._type_defined)
-        if isinstance(value, dict):
-
-            return value['name'].replace(u'\xa0', u'')
-        elif isinstance(value, list):
-            return [e['name'].replace(u'\xa0', u'') for e in value]
-        else:
-            return value
+        :param property_name:
+        :param data:
+        :return:
+        """
+        _log.debug(f"self._parent: {self._parent}")
+        self._parent._update('properties', {property_name:data})
 
 
 class TitleProperty(MutableProperty):
@@ -497,15 +557,104 @@ class TitleProperty(MutableProperty):
         super().__set__(obj, value)
 
 
-class DbPropertyEmail(_PropertyObject):
+class _PropertyObject(_NotionObject):
+    """
+    Basic Object for Data and Page Properties.
+    """
+    # to find which object is proper, uses '_type_defined' while assigning event.
+    _type_defined = ''
+
+    def __new__(cls, obj, data, parent_type, force_new=False):
+        new_cls = super(_PropertyObject, cls)
+        ins = new_cls.__new__(cls, data, force_new=force_new)
+
+        return ins
+
+    def __init__(self, parent: PropertiesProperty, data, parent_type, force_new=False):
+        self._parent: PropertiesProperty = parent
+        self._parent_type = parent_type
+        super().__init__(data)
+
+    def __repr__(self):
+        return f"<'{self.__class__.__name__}: {self.name}' at {hex(id(self))}>"
+
+
+"""
+Page Property for Properties
+"""
+
+
+class _PagePropertyObject(_PropertyObject):
+    """
+    Basic Object for Data and Page Properties.
+    """
+    # to find which object is proper, uses '_type_defined' while assigning event.
+    _type_defined = ''
+
+    def _update(self, property_name, data):
+        self._parent._update(self.name, {property_name: data})
+
+    def get_value(self):
+
+        value = getattr(self, self.type)
+        if isinstance(value, dict):
+
+            return value['name'].replace(u'\xa0', u'')
+        elif isinstance(value, list):
+            return [e['name'].replace(u'\xa0', u'') for e in value]
+        else:
+            return value
+
+
+class PagePropertyEmail(_PagePropertyObject):
     _type_defined = 'email'
 
+
+class PagePropertyText(_PagePropertyObject):
+    _type_defined = 'rich_text'
+
+    def get_value(self):
+        return _from_rich_text_array_to_plain_text(self.rich_text)
+
+
+class PagePropertyTitle(_PagePropertyObject):
+    _type_defined = 'title'
+    title = TitleProperty()
+
+
+"""
+Database Property for Properties
+"""
+
+
+class _DbPropertyObject(_PropertyObject):
+    """
+    Basic Object for Data and Page Properties.
+    """
+    # to find which object is proper, uses '_type_defined' while assigning event.
+    _type_defined = ''
+
+    name = MutableProperty()
+    type = MutableProperty()
+
+    def _update(self, property_name, data):
+        if property_name == 'type':
+            property_type = data
+            self._parent._update(self.name, {property_name: property_type, property_type: {}})
+        else:
+            self._parent._update(self.name, {property_name: data})
+
+
+class DbPropertyEmail(_DbPropertyObject):
+    _type_defined = 'email'
 
 
 class Database(_NotionBasicObject):
 
     _api_url = 'v1/databases/'
 
+    id = ImmutableProperty()
+    created_time = ImmutableProperty()
     title = TitleProperty()
     icon = MutableProperty()
     cover = MutableProperty()
@@ -536,8 +685,140 @@ class Database(_NotionBasicObject):
         url = self._api_url + self.id
         request, data = self._request.patch(url, {property_name: contents})
         # update property of object using 'id' value.
-        _log.debug(" ".join(map(str, (type(self).__init__))))
+        _log.debug(f"{type(self).__init__}")
         type(self)(request, data, key=data['id'])
+
+    def query(self, filter=None, sorts=None,
+              start_cursor=None, page_size=None):
+        """
+        Args:
+            filter: query.filter
+            sorts: query.sorts
+            start_cursor: string
+            page_size: int (Max:100)
+
+        Returns: 'pages iterator'
+
+        """
+        if filter:
+            filter = filter._body
+        else:
+            filter = {'or':[]}
+
+        if sorts:
+           sorts = dict(sorts._body)
+        else:
+            sorts = []
+
+        payload = dict()
+        payload['filter'] = filter
+        payload['sorts'] = sorts
+
+        if page_size:
+            payload['page_size'] = page_size
+
+        id_raw = self.id.replace('-', '')
+        url = f'{self._api_url}{id_raw}/query'
+        return QueriedPageIterator(self._request, url, payload)
+
+
+class QueriedPageIterator:
+    """
+    database Queried Page Iterator
+    """
+    # self._request.post(url, payload))
+    # return QueriedPageIterator(self, url, payload)
+    def __init__(self, request: HttpRequest, url: str, payload: dict):
+        """
+        Automatically query next page.
+
+        Warning: read all columns from huge database should be harm.
+
+        Args:
+            request: HttpRequest
+            url: str
+            payload: dict
+
+        Usage:
+            queried = db.query(filter=filter_base)
+            for page in queried:
+                ...
+
+        """
+
+        self._request: HttpRequest = request
+        self._url: str = url
+        self._payload: dict = dict(payload)
+
+        request_post: HttpRequest
+        result_data: dict
+        request_post, result_data = request.post(url, payload)
+
+        self._assign_data(result_data)
+
+    def _assign_data(self, result_data: dict):
+
+        self.object = result_data['object']
+        self._results = result_data['results']
+        self.next_cursor = result_data['next_cursor']
+        self.has_more = result_data['has_more']
+
+        self.results_iter = iter(self._results)
+
+    def __iter__(self):
+        self.results_iter = iter(self._results)
+        return self
+
+    def __next__(self):
+        try:
+            return Page(self._request, next(self.results_iter))
+        except StopIteration:
+
+            if self.has_more:
+                self._payload['start_cursor'] = self.next_cursor
+                request, result_data = self._request.post(self._url, self._payload)
+                self._assign_data(result_data)
+                return self.__next__()
+            else:
+                raise StopIteration
+
+
+class Page(_NotionBasicObject):
+    """
+    Page Object
+    """
+    properties = PropertiesProperty(object_type='page')
+
+    _api_url = 'v1/pages/'
+
+    @_notion_object_init_handler
+    def __init__(self, request, data):
+
+        """
+
+        Args:
+            request: Notion._request
+            data: returned from ._request
+        """
+        self._request = request
+        object_type = data['object']
+        assert object_type == 'page', f"data type is not 'database'. (type: {object_type})"
+        super().__init__(request, data)
+
+    def __repr__(self):
+        return f"<Page at '{self.id}'>"
+
+    def get_properties(self) -> dict:
+        """
+        return value of properties simply
+        :return: {'key' : value, ...}
+        """
+        result = dict()
+        for k, v in self.properties.items():
+            v: _DbPropertyObject
+            result[k] = v.get_value()
+
+        return result
 
 
 database_properties_mapper = dict()
@@ -546,12 +827,12 @@ page_properties_mapper = dict()
 for key in dir():
     db_keyword = 'DbProperty'
     if key[:len(db_keyword)] == db_keyword:
-        property_cls: _PropertyObject = globals()[key]
+        property_cls: _DbPropertyObject = globals()[key]
         database_properties_mapper[property_cls._type_defined] = property_cls
 
-    page_keyword = 'Property'
+    page_keyword = 'PageProperty'
     if key[:len(page_keyword)] == page_keyword:
-        property_cls: _PropertyObject = globals()[key]
+        property_cls: _PagePropertyObject = globals()[key]
         page_properties_mapper[property_cls._type_defined] = property_cls
 
 
