@@ -52,9 +52,8 @@ def _set_proper_descriptor(cls, key, value):
     :param value:
     :return:
     """
-    # TODO: change Object to Descriptor
     if type(value) in [str, bool, int, float] or (value is None):
-        setattr(cls, key, ImmutableProperty(cls, key))
+        setattr(cls, key, ImmutablkeProperty(cls, key))
 
     elif type(value) == dict:
         obj = ObjectProperty(cls, key)
