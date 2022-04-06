@@ -11,7 +11,7 @@ import logging
 
 from notion_api import settings
 
-_logger = logging.getLogger(__name__)
+_log = logging.getLogger(__name__)
 
 
 class HttpRequestError(Exception):
@@ -47,8 +47,8 @@ class HttpRequest:
         :param payload:
         :return: python data type object(dictionay and list)
         """
-        _logger.debug('url: ' + self.base_url + url)
-        _logger.debug('payload:' + str(payload))
+        _log.debug('url: ' + self.base_url + url)
+        _log.debug('payload:' + str(payload))
         payload_json = ''
         if payload:
             payload_json = json.dumps(payload)
@@ -57,7 +57,7 @@ class HttpRequest:
                                   timeout=self.timeout).text
 
         result = json.loads(result)
-        _logger.debug(f"result: {result}")
+        _log.debug(f"result: {result}")
         if result['object'] == 'error':
             status = result['status']
             code = result['code']

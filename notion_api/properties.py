@@ -1,34 +1,4 @@
-from notion_api.objects import RichTextProperty, ObjectProperty, ArrayProperty
-
 _log = __import__('logging').getLogger(__name__)
-
-
-def _set_proper_descriptor(cls, key, value):
-    """
-    check the value type and assign property with proper descriptor.
-    (only descriptor, not value)
-
-    :param key:
-    :param value:
-    :return:
-    """
-    if type(value) in [str, bool, int, float] or (value is None):
-        setattr(cls, key, ImmutableProperty(cls, key))
-
-    elif key == 'rich_text':
-        obj = RichTextProperty(cls, key)
-        _log.debug(f"rich_text, {value}")
-        setattr(cls, key, obj)
-
-    elif type(value) == dict:
-        obj = ObjectProperty(cls, key)
-        setattr(cls, key, obj)
-
-    elif type(value) == list:
-        obj = ArrayProperty(cls, key)
-        setattr(cls, key, obj)
-    else:
-        raise NotionApiPropertyException(f"could not assign proper descriptor: '{type(value)}'")
 
 
 class NotionApiPropertyException(Exception):
@@ -40,7 +10,6 @@ class NotionApiPropertyUnassignedException(NotionApiPropertyException):
 
 
 class ImmutableProperty:
-
     """
     Descriptor for property. User assignment is prohibited.
     """
@@ -77,6 +46,7 @@ class ImmutableProperty:
             setattr(obj, self.private_name, value)
         else:
             self._update_event(obj, value)
+
     def _update_event(self, obj, value):
         raise NotionApiPropertyException('Immutable Property could not be assigned')
 
