@@ -1,6 +1,5 @@
 from notion_api.functions import _from_rich_text_array_to_plain_text, _from_plain_text_to_rich_text_array
 
-# from notion_api.objects import _log
 from notion_api.object_adt import MutableProperty, _ListObject
 from notion_api.object_basic import _NotionObject
 
@@ -82,9 +81,11 @@ class _DbPropertyObject(_PropertyObject):
     """
     # to find which object is proper, uses '_type_defined' while assigning event.
     _type_defined = ''
+    _mutable = False
 
     name = MutableProperty()
     type = MutableProperty()
+    _input_validation = tuple()
 
     def _update(self, property_name, data):
         if property_name == 'type':
@@ -92,3 +93,17 @@ class _DbPropertyObject(_PropertyObject):
             self._parent._update(self.name, {property_name: property_type, property_type: {}})
         else:
             self._parent._update(self.name, {property_name: data})
+
+    def _convert_to_update(self, value: any):
+        """
+        convert value to update object form.
+
+        to make some more specific, 'inheritance' should overide this method.
+
+        ex) some_number_property._convert_to_update(123):
+            return {'number': 123}
+
+        :param value: nay of type
+        :return: dictionary
+        """
+        return {self._type_defined: value}

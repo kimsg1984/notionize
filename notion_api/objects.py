@@ -21,7 +21,7 @@ from notion_api.http_request import HttpRequest
 from notion_api.object_basic import _NotionObject
 from notion_api.properties_property import PropertiesProperty
 from notion_api.functions import _notion_object_init_handler
-from notion_api.properties_basic import TitleProperty, _PagePropertyObject
+from notion_api.properties_basic import TitleProperty, _PagePropertyObject, _DbPropertyObject
 from notion_api.object_adt import ImmutableProperty, MutableProperty
 
 _log = __import__('logging').getLogger(__name__)
@@ -282,13 +282,20 @@ class Database(_NotionBasicObject):
         payload = dict()
         payload['parent'] = {'database_id': self.id}
 
+        payload['properties'] = dict(properties)
+
         # TODO: properties validation
         if properties:
             for key, value in properties.items():
-                assert key in self.properties, f"'{key}' property not in the database '{self.title}'."
-                
 
-        payload['properties'] = dict(properties)
+                assert key in self.properties, f"'{key}' property not in the database '{self.title}'."
+                db_property: _DbPropertyObject = self.properties[key]
+                assert db_property._mutable is True, f"{db_property}('{key}') property is 'Immutable Property'"
+                assert type(value) in db_property._input_validation, f"type of '{value}' is '{type(value)}'. " \
+                    f"{db_property}('{key}') property has type {db_property._input_validation}"
+
+                value_converted = db_property._convert_to_update(value)
+                payload['properties'][key] = value_converted
 
         return Page(*self._request.post(url, payload))
 

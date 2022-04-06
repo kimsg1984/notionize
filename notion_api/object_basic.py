@@ -1,10 +1,6 @@
 from notion_api.object_adt import _DictionaryObject, _ListObject, ImmutableProperty
 from notion_api.exception import NotionApiPropertyException
 
-# import notion_api.page_properties
-# import notion_api.db_properties
-# from notion_api.properties_property import database_properties_mapper, page_properties_mapper
-
 _log = __import__('logging').getLogger(__name__)
 
 
@@ -30,8 +26,8 @@ def _set_proper_descriptor(cls, key, value):
         setattr(cls, key, ImmutableProperty(cls, key))
 
     elif key == 'rich_text':
-        obj = RichTextProperty(cls, key)
-        _log.debug(f"rich_text, {value}")
+        obj = RichTextProperty(cls, key, mutable=True)
+        # _log.debug(f"rich_text, {cls}, {key}: {value}")
         setattr(cls, key, obj)
 
     elif type(value) == dict:
@@ -84,7 +80,7 @@ class _NotionObject(object):
         before assign the object and property, '__new__' method set the proper descriptors.
         :param data:
         """
-        # _log.debug(f"{cls}")
+        _log.debug(f"{cls}")
         new_cls = _create_notion_object_class(cls, force_new=force_new)
 
         for k, v in data.items():
@@ -115,7 +111,7 @@ class _NotionObject(object):
 
 class ObjectProperty(ImmutableProperty):
     """
-    ObjectProperty which inherits '_NotionObject'.
+    ObjectProperty which inherits 'ImmutableProperty'.
     """
 
     def __set__(self, owner, value: dict):
@@ -125,17 +121,23 @@ class ObjectProperty(ImmutableProperty):
 
 class ArrayProperty(ImmutableProperty):
     """
-    ObjectProperty which inherits '_NotionObject'.
+    ArrayProperty which inherits 'ImmutableProperty'.
     """
 
+    def __init__(self, owner=None, name='', mutable=False):
+        self.mutable = mutable
+        super().__init__(owner=owner, name=name)
+
     def __set__(self, owner, value: dict):
-        obj = _ListObject(self.public_name, owner, value)
+        # def __init__(self, name, owner, data: list=None, mutable=False):
+
+        obj = _ListObject(self.public_name, owner, value, mutable=self.mutable)
+
         super().__set__(owner, obj)
 
 
 class RichTextProperty(ArrayProperty):
-    def __set__(self, owner, value: dict):
-        ImmutableProperty.__set__(self, owner, value)
+    pass
 
 
 

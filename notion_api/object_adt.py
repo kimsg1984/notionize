@@ -195,12 +195,22 @@ class ImmutableProperty:
         :param owner: class
         :param name: string
         """
+        if name:
+            self.public_name = name
+            self.private_name = '__property_' + name
 
+        # Dynamic assignment of 'descriptor' does not execute '__set_name__' method, should touch manually.
         if owner and name:
+            # _log.debug(f"owner and name, {owner} and {name}")
             self.__set_name__(owner, name)
 
-    def __set_name__(self, owner, name):
-        self._parent = owner
+    def __set_name__(self, owner: object, name: str):
+        """
+
+        :param owner: instance of 'parent'
+        :param name: property name
+        :return:
+        """
         self.public_name = name
         self.private_name = '__property_' + name
 
@@ -214,6 +224,13 @@ class ImmutableProperty:
         return hasattr(obj, self.private_name)
 
     def __set__(self, obj, value):
+        """
+
+        :param obj:
+        :param value:
+        :return:
+        """
+
         if not self._check_assigned(obj):
             setattr(obj, self.private_name, value)
         else:

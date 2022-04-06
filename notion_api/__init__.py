@@ -1,1 +1,1 @@
-__all__ = ["query", "notion", "objects"]
+__all__ = ["query", "notion", "objects", "exception"]

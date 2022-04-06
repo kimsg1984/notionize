@@ -5,6 +5,7 @@ from notion_api.properties_basic import _PropertyObject, _PagePropertyObject, _D
 import notion_api.properties_page
 import notion_api.properties_db
 
+
 class PropertiesProperty(_DictionaryObject, ImmutableProperty):
     """
     'PropertiesProperty' for 'Database' and 'Page'. Mutable Type
@@ -39,7 +40,7 @@ class PropertiesProperty(_DictionaryObject, ImmutableProperty):
         self.__set_name__(owner, self.name)
 
         if not self._check_assigned(owner):
-            setattr(self._parent, self.private_name, dict())
+            setattr(owner, self.private_name, dict())
 
         _log.debug(f'{self}, {owner}')
         mutable_status = self._mutable
