@@ -1,1 +1,1 @@
-__all__ = ["query.py", "notion", "objects.py"]
+__all__ = ["query", "notion", "objects"]
