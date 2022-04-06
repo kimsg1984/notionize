@@ -7,6 +7,39 @@ from notion_api.properties import ImmutableProperty, NotionApiPropertyException,
 _log = __import__('logging').getLogger(__name__)
 
 
+def _get_proper_object(key, value: object, parent):
+    """
+    check the type of object and return with some wrapper if it needed.
+
+    - primitives(str, int, float, bool, None): return  'raw object'.
+    - dictionary -> return as '_DictionaryImmutableObject'
+    - list -> return as '_ListImmutableObject'
+
+    :param value:
+    :return:
+    """
+    # check parent has descriptor.
+    if hasattr(parent, key):
+        try:
+            getattr(parent, key)
+        except NotionApiPropertyUnassignedException:
+            return value
+
+    # parent has 'no descriptor' or has and already 'assigned own value'.
+    if type(value) in [str, int, float, bool, None]:
+        return value
+
+    elif type(value) == dict:
+        # _log.debug(f"key, value: object, parent: {key}, {value}, {parent}")
+        dict_obj = _DictionaryObject(key, parent, data=value)
+        return dict_obj
+    elif type(value) == list:
+        list_obj = _ListObject(key, parent, data=value)
+        return list_obj
+    else:
+        return value
+
+
 def _notion_object_init_handler(init_function):
     """
     All notion object having '_update' method should be wrapped by 'this decorator'.
@@ -20,9 +53,8 @@ def _notion_object_init_handler(init_function):
             return init_function(*args, **kwargs)
 
     return wrapper_function
-
-
 class _ListObject(_MutableSequence):
+
 
     def __init__(self, name, owner, data: list=None, mutable=False):
 
@@ -69,13 +101,13 @@ class _ListObject(_MutableSequence):
 
     def __len__(self):
         return len(self._data)
-
     def insert(self, index, value):
         assert len(self._data) == index, 'Insert Event does not permit'
         self._data.append(value)
 
 
 class _DictionaryObject(_MutableMapping):
+
 
     """
     '_DictionaryObject Descriptor' which used for 'Key-Value' pettern. Imutable is 'default'.
@@ -107,6 +139,8 @@ class _DictionaryObject(_MutableMapping):
     def __repr__(self):
         return f"<'{self.__class__.__name__}(dict_type{'-mutable' if self._mutable else ''})' at {hex(id(self))}>"
 
+    # Implement MutableMapping method
+
     def __set__(self, owner, value: dict):
         """
         Allow only first event.
@@ -128,8 +162,6 @@ class _DictionaryObject(_MutableMapping):
         else:
             _log.debug(f"{self.name}, {owner}, {self._data}")
             raise NotionApiPropertyException(f"values of '_DictionaryObject' already assigned")
-
-    # Implement MutableMapping method
 
     def __getitem__(self, key):
         return self._data[key]
@@ -161,39 +193,7 @@ class _DictionaryObject(_MutableMapping):
 
     def __len__(self):
         return len(self._data)
-
     def keys(self):
         return self._data.keys()
 
 
-def _get_proper_object(key, value: object, parent):
-    """
-    check the type of object and return with some wrapper if it needed.
-
-    - primitives(str, int, float, bool, None): return  'raw object'.
-    - dictionary -> return as '_DictionaryImmutableObject'
-    - list -> return as '_ListImmutableObject'
-
-    :param value:
-    :return:
-    """
-    # check parent has descriptor.
-    if hasattr(parent, key):
-        try:
-            getattr(parent, key)
-        except NotionApiPropertyUnassignedException:
-            return value
-
-    # parent has 'no descriptor' or has and already 'assigned own value'.
-    if type(value) in [str, int, float, bool, None]:
-        return value
-
-    elif type(value) == dict:
-        # _log.debug(f"key, value: object, parent: {key}, {value}, {parent}")
-        dict_obj = _DictionaryObject(key, parent, data=value)
-        return dict_obj
-    elif type(value) == list:
-        list_obj = _ListObject(key, parent, data=value)
-        return list_obj
-    else:
-        return value

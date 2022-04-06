@@ -21,41 +21,12 @@ from notion_api.http_request import HttpRequest
 import logging
 
 import notion_api.object_basic
-from notion_api.object_basic import _ListObject, \
-    _DictionaryObject
-from notion_api.properties import ImmutableProperty, MutableProperty, NotionApiPropertyException
+from notion_api.object_basic import _ListObject, _DictionaryObject
+from notion_api.properties import ImmutableProperty, MutableProperty, _set_proper_descriptor
 
 _notion_object_init_handler = notion_api.object_basic._notion_object_init_handler
 
 _log = logging.getLogger(__name__)
-
-
-def _set_proper_descriptor(cls, key, value):
-    """
-    check the value type and assign property with proper descriptor.
-    (only descriptor, not value)
-
-    :param key:
-    :param value:
-    :return:
-    """
-    if type(value) in [str, bool, int, float] or (value is None):
-        setattr(cls, key, ImmutableProperty(cls, key))
-
-    elif key == 'rich_text':
-        obj = RichTextProperty(cls, key)
-        _log.debug(f"rich_text, {value}")
-        setattr(cls, key, obj)
-
-    elif type(value) == dict:
-        obj = ObjectProperty(cls, key)
-        setattr(cls, key, obj)
-
-    elif type(value) == list:
-        obj = ArrayProperty(cls, key)
-        setattr(cls, key, obj)
-    else:
-        raise NotionApiPropertyException(f"could not assign proper descriptor: '{type(value)}'")
 
 
 def _from_rich_text_array_to_plain_text(array):
