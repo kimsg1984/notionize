@@ -1,12 +1,12 @@
-from notion_api.object_adt import _DictionaryObject, ImmutableProperty
+from notion_api.object_adt import DictionaryObject, ImmutableProperty
 from notion_api.object_basic import _log
-from notion_api.properties_basic import _PropertyObject, _PagePropertyObject, _DbPropertyObject
+from notion_api.properties_basic import _PropertyObject, PagePropertyObject, DbPropertyObject
 
 import notion_api.properties_page
 import notion_api.properties_db
 
 
-class PropertiesProperty(_DictionaryObject, ImmutableProperty):
+class PropertiesProperty(DictionaryObject, ImmutableProperty):
     """
     'PropertiesProperty' for 'Database' and 'Page'. Mutable Type
     """
@@ -54,17 +54,21 @@ class PropertiesProperty(_DictionaryObject, ImmutableProperty):
             raise NotImplemented(f"'{self._parent_object_type}' object is not implemented")
 
         for k, v in value.items():
-            if v['type'] in properties_mapper:
-                property_cls: _PropertyObject = properties_mapper.get(v['type'])
-                property_ins: _PropertyObject = property_cls(self, v, parent_type=self._parent_object_type)
+            property_type: str = v['type']
+            if self._parent_object_type == 'database' and property_type == 'rich_text':
+                property_type = 'text'
+
+            if property_type in properties_mapper:
+
+                property_cls: _PropertyObject = properties_mapper.get(property_type)
+                property_ins: _PropertyObject = property_cls(self, v, parent_type=self._parent_object_type, name=k)
             else:
                 if self._parent_object_type == 'database':
-                    # _log.debug(f"self, v: {self}, {v}")
-                    property_ins: _DbPropertyObject = _DbPropertyObject(self, v, parent_type=self._parent_object_type, force_new=True)
-
+                    property_ins: DbPropertyObject = DbPropertyObject(self, v, parent_type=self._parent_object_type,
+                                                                      force_new=True, name=k)
                 elif self._parent_object_type == 'page':
-                    property_ins: _PagePropertyObject = _PagePropertyObject(self, v, parent_type=self._parent_object_type,
-                                                                        force_new=True)
+                    property_ins: PagePropertyObject = PagePropertyObject(self, v, parent_type=self._parent_object_type,
+                                                                          force_new=True, name=k)
             self.__setitem__(k, property_ins)
         self._mutable = mutable_status
 
@@ -92,11 +96,11 @@ Dynamic Properties Descriptor Assignment
 for key in dir(notion_api.properties_db):
     db_keyword = 'DbProperty'
     if key[:len(db_keyword)] == db_keyword:
-        property_cls: _DbPropertyObject = getattr(notion_api.properties_db, key)
+        property_cls: DbPropertyObject = getattr(notion_api.properties_db, key)
         database_properties_mapper[property_cls._type_defined] = property_cls
 
 for key in dir(notion_api.properties_page):
     page_keyword = 'PageProperty'
     if key[:len(page_keyword)] == page_keyword:
-        property_cls: _PagePropertyObject = getattr(notion_api.properties_page, key)
+        property_cls: PagePropertyObject = getattr(notion_api.properties_page, key)
         page_properties_mapper[property_cls._type_defined] = property_cls

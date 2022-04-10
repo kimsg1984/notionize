@@ -1,10 +1,13 @@
-from typing import MutableMapping as _MutableMapping, MutableSequence as _MutableSequence
+from typing import MutableMapping, MutableSequence
+from typing import Optional
+
 
 from notion_api.exception import NotionApiPropertyException, NotionApiPropertyUnassignedException
 
 _log = __import__('logging').getLogger(__name__)
 
-def _get_proper_object(key, value: object, parent):
+
+def get_proper_object(key: str, value: object, parent: object) -> object:
     """
     check the type of object and return with some wrapper if it needed.
 
@@ -12,7 +15,9 @@ def _get_proper_object(key, value: object, parent):
     - dictionary -> return as '_DictionaryImmutableObject'
     - list -> return as '_ListImmutableObject'
 
+    :param key:
     :param value:
+    :param parent:
     :return:
     """
     # check parent has descriptor.
@@ -28,16 +33,16 @@ def _get_proper_object(key, value: object, parent):
 
     elif type(value) == dict:
         # _log.debug(f"key, value: object, parent: {key}, {value}, {parent}")
-        dict_obj = _DictionaryObject(key, parent, data=value)
+        dict_obj = DictionaryObject(key, parent, data=value)
         return dict_obj
     elif type(value) == list:
-        list_obj = _ListObject(key, parent, data=value)
+        list_obj = ListObject(key, parent, data=value)
         return list_obj
     else:
         return value
 
 
-class _DictionaryObject(_MutableMapping):
+class DictionaryObject(MutableMapping):
 
     """
     '_DictionaryObject Descriptor' which used for 'Key-Value' pettern. Imutable is 'default'.
@@ -85,7 +90,7 @@ class _DictionaryObject(_MutableMapping):
             mutable_status = self._mutable
             self._mutable = True
             for k, v in value.items():
-                self.__setitem__(k, _get_proper_object(k, v, self))
+                self.__setitem__(k, get_proper_object(k, v, self))
             self._mutable = mutable_status
         else:
             _log.debug(f"{self.name}, {owner}, {self._data}")
@@ -128,7 +133,7 @@ class _DictionaryObject(_MutableMapping):
         return self._data.keys()
 
 
-class _ListObject(_MutableSequence):
+class ListObject(MutableSequence):
 
     def __init__(self, name, owner, data: list=None, mutable=False):
 
@@ -158,7 +163,7 @@ class _ListObject(_MutableSequence):
         self._mutable = True
         for e in value:
             # _log.debug(f"{e}")
-            proper_obj = _get_proper_object(self.name, e, self)
+            proper_obj = get_proper_object(self.name, e, self)
             self._data.append(proper_obj)
 
         self._mutable = mutable_status
@@ -186,7 +191,7 @@ class ImmutableProperty:
     Descriptor for property. User assignment is prohibited.
     """
 
-    def __init__(self, owner=None, name=''):
+    def __init__(self, owner: object = None, name: str = ''):
         """
         Initilize ImmutableProperty
 
@@ -204,7 +209,7 @@ class ImmutableProperty:
             # _log.debug(f"owner and name, {owner} and {name}")
             self.__set_name__(owner, name)
 
-    def __set_name__(self, owner: object, name: str):
+    def __set_name__(self, owner: object, name: str) -> None:
         """
 
         :param owner: instance of 'parent'
@@ -214,16 +219,16 @@ class ImmutableProperty:
         self.public_name = name
         self.private_name = '__property_' + name
 
-    def __get__(self, obj, objtype=None):
+    def __get__(self, obj: object, objtype: Optional[object]=None) -> object:
         if hasattr(self, 'private_name'):
             return getattr(obj, self.private_name)
         else:
             raise NotionApiPropertyUnassignedException('Value is not assigned.')
 
-    def _check_assigned(self, obj):
+    def _check_assigned(self, obj: object) -> bool:
         return hasattr(obj, self.private_name)
 
-    def __set__(self, obj, value):
+    def __set__(self, obj: object, value: object) -> None:
         """
 
         :param obj:

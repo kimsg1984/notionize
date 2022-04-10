@@ -1,16 +1,7 @@
-from notion_api.object_adt import _DictionaryObject, _ListObject, ImmutableProperty
+from notion_api.object_adt import DictionaryObject, ListObject, ImmutableProperty
 from notion_api.exception import NotionApiPropertyException
 
 _log = __import__('logging').getLogger(__name__)
-
-
-def _pdir(obj, level='public'):
-    attr_list = dir(obj)
-    if level == 'hide':
-        attr_list = [a for a in attr_list if a[:2] != '__']
-    elif level == 'public':
-        attr_list = [a for a in attr_list if a[0] != '_']
-    return attr_list
 
 
 def _set_proper_descriptor(cls, key, value):
@@ -68,7 +59,7 @@ def _create_notion_object_class(cls, mro_tuple:tuple=tuple(), namespace:dict={},
     return new_cls
 
 
-class _NotionObject(object):
+class NotionObject(object):
     """
     '_NotionObject' which set properties as 'descriptor' or 'specific object' and assigns value.
     """
@@ -80,14 +71,14 @@ class _NotionObject(object):
         before assign the object and property, '__new__' method set the proper descriptors.
         :param data:
         """
-        _log.debug(f"{cls}")
+        # _log.debug(f"{cls}")
         new_cls = _create_notion_object_class(cls, force_new=force_new)
 
         for k, v in data.items():
             if k not in dir(new_cls):
                 _set_proper_descriptor(new_cls, k, v)
 
-        super_cls = super(_NotionObject, new_cls)
+        super_cls = super(NotionObject, new_cls)
         notion_ins = super_cls.__new__(new_cls)
 
         return notion_ins
@@ -115,7 +106,7 @@ class ObjectProperty(ImmutableProperty):
     """
 
     def __set__(self, owner, value: dict):
-        obj = _DictionaryObject(self.public_name, owner, value)
+        obj = DictionaryObject(self.public_name, owner, value)
         super().__set__(owner, obj)
 
 
@@ -131,7 +122,7 @@ class ArrayProperty(ImmutableProperty):
     def __set__(self, owner, value: dict):
         # def __init__(self, name, owner, data: list=None, mutable=False):
 
-        obj = _ListObject(self.public_name, owner, value, mutable=self.mutable)
+        obj = ListObject(self.public_name, owner, value, mutable=self.mutable)
 
         super().__set__(owner, obj)
 

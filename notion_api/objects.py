@@ -16,22 +16,35 @@ Fallow rules make python object safety from user assignment event.
 
 """
 
+from typing import Type
+
 from notion_api.http_request import HttpRequest
 
-from notion_api.object_basic import _NotionObject
+from notion_api.object_basic import NotionObject
 from notion_api.properties_property import PropertiesProperty
-from notion_api.functions import _notion_object_init_handler
-from notion_api.properties_basic import TitleProperty, _PagePropertyObject, _DbPropertyObject
+from notion_api.functions import notion_object_init_handler
+from notion_api.properties_basic import TitleProperty, PagePropertyObject, DbPropertyObject
 from notion_api.object_adt import ImmutableProperty, MutableProperty
+
+from query import Query
+from query import filter
+from query import T_Filter
+from query import T_Sorts
+
+from typing import Optional
+from typing import Any
+from typing import Dict
+from typing import List
+from typing import Union
 
 _log = __import__('logging').getLogger(__name__)
 
 
-class _NotionBasicObject(_NotionObject):
+class NotionBasicObject(NotionObject):
     """
     '_NotionBasicObject' for Database, Page and Block.
     """
-    _instances = {}
+    _instances: Dict[str, Any] = {}
 
     def __new__(cls, request, data, instance_id: str = None):
         """
@@ -43,21 +56,19 @@ class _NotionBasicObject(_NotionObject):
         :param instance_id:
         """
         _log.debug(" ".join(map(str, ('_NotionBasicObject:', cls))))
-        instance = super(_NotionBasicObject, cls).__new__(cls, data)
+        instance = super(NotionBasicObject, cls).__new__(cls, data)
 
         if instance_id:
-            org_namespace = dict(_NotionBasicObject._instances[instance_id].__dict__)
+            org_namespace = dict(NotionBasicObject._instances[instance_id].__dict__)
 
-            # instance.__init__(data)
-
-            _NotionBasicObject._instances[instance_id].__dict__ = instance.__dict__
+            NotionBasicObject._instances[instance_id].__dict__ = instance.__dict__
             for k in set(org_namespace) - set(instance.__dict__):
                 instance.__dict__[k] = org_namespace[k]
 
         else:
             instance_id = data['id']
 
-            _NotionBasicObject._instances[instance_id] = instance
+            NotionBasicObject._instances[instance_id] = instance
 
         return instance
 
@@ -69,26 +80,16 @@ class _NotionBasicObject(_NotionObject):
         url = self._api_url + self.id
         request, data = self._request.patch(url, {property_name: contents})
         # update property of object using 'id' value.
-        cls: type(_NotionBasicObject) = type(self)
+        cls: type(NotionBasicObject) = type(self)
         cls(request, data, instance_id=data['id'])
-
-
-"""
-Page Property for Properties
-"""
-
-"""
-Database Property for Properties
-"""
 
 
 class QueriedPageIterator:
     """
     database Queried Page Iterator
     """
-    # self._request.post(url, payload))
-    # return QueriedPageIterator(self, url, payload)
-    def __init__(self, request: HttpRequest, url: str, payload: dict):
+
+    def __init__(self, request: HttpRequest, url: str, payload: Dict[str, Any]):
         """
         Automatically query next page.
 
@@ -108,10 +109,10 @@ class QueriedPageIterator:
 
         self._request: HttpRequest = request
         self._url: str = url
-        self._payload: dict = dict(payload)
+        self._payload: Dict[str, Any] = dict(payload)
 
         request_post: HttpRequest
-        result_data: dict
+        result_data: Dict[str, Any]
         request_post, result_data = request.post(url, payload)
 
         self._assign_data(result_data)
@@ -143,7 +144,7 @@ class QueriedPageIterator:
                 raise StopIteration
 
 
-class Database(_NotionBasicObject):
+class Database(NotionBasicObject):
 
     _api_url = 'v1/databases/'
 
@@ -155,8 +156,8 @@ class Database(_NotionBasicObject):
 
     properties = PropertiesProperty(object_type='database')
 
-    @_notion_object_init_handler
-    def __init__(self, request, data):
+    @notion_object_init_handler  # type: ignore
+    def __init__(self, request: HttpRequest, data):
         """
         initilize Database instance.
 
@@ -172,6 +173,8 @@ class Database(_NotionBasicObject):
         _log.debug(" ".join(map(str, ('Database:', self))))
         super().__init__(request, data)
 
+        self._query_helper = Query(self.properties)
+
     def _update(self, property_name, contents):
         url = self._api_url + self.id
         request, data = self._request.patch(url, {property_name: contents})
@@ -179,31 +182,46 @@ class Database(_NotionBasicObject):
         _log.debug(f"{type(self).__init__}")
         type(self)(request, data, instance_id=data['id'])
 
-    def query(self, filter=None, sorts=None,
-              start_cursor=None, page_size=None):
+    def query(self, query_expression: str) -> QueriedPageIterator:
+        """
+        query with simple 'python expression'.
+
+        :param query_expression:
+        :return: 'pages iterator'
+        """
+        filter_ins: Union[filter, None] = self._query_helper.query_by_expression(query_expression)
+
+        # todo: sorts implement
+        sorts_ins: Union[filter, None] = None
+        return self._filter_and_sort(notion_filter=filter_ins, sorts=sorts_ins)
+
+    def _filter_and_sort(self, notion_filter: Optional[T_Filter] = None, sorts: Optional[T_Sorts] = None,
+                         start_cursor: Optional[int] = None, page_size: Optional[int] = None) -> QueriedPageIterator:
         """
         Args:
-            filter: query.filter
+            notion_filter: query.filter
             sorts: query.sorts
             start_cursor: string
             page_size: int (Max:100)
 
         Returns: 'pages iterator'
-
         """
-        if filter:
-            filter = filter._body
+        filter_obj: Dict[str, Any]
+        sort_obj: List[Any]
+
+        if notion_filter:
+            notion_filter = notion_filter._body
         else:
-            filter = {'or':[]}
+            notion_filter = {'or': []}
 
         if sorts:
-           sorts = dict(sorts._body)
+           sort_obj = list(sorts._body)
         else:
-            sorts = []
+            sort_obj = list()
 
-        payload = dict()
-        payload['filter'] = filter
-        payload['sorts'] = sorts
+        payload: Dict[str, Any] = dict()
+        payload['filter'] = notion_filter
+        payload['sorts'] = sort_obj
 
         if page_size:
             payload['page_size'] = page_size
@@ -281,15 +299,13 @@ class Database(_NotionBasicObject):
 
         payload = dict()
         payload['parent'] = {'database_id': self.id}
-
         payload['properties'] = dict(properties)
 
-        # TODO: properties validation
         if properties:
             for key, value in properties.items():
 
                 assert key in self.properties, f"'{key}' property not in the database '{self.title}'."
-                db_property: _DbPropertyObject = self.properties[key]
+                db_property: DbPropertyObject = self.properties[key]
                 assert db_property._mutable is True, f"{db_property}('{key}') property is 'Immutable Property'"
                 assert type(value) in db_property._input_validation, f"type of '{value}' is '{type(value)}'. " \
                     f"{db_property}('{key}') property has type {db_property._input_validation}"
@@ -300,7 +316,7 @@ class Database(_NotionBasicObject):
         return Page(*self._request.post(url, payload))
 
 
-class Page(_NotionBasicObject):
+class Page(NotionBasicObject):
     """
     Page Object
     """
@@ -308,7 +324,7 @@ class Page(_NotionBasicObject):
 
     _api_url = 'v1/pages/'
 
-    @_notion_object_init_handler
+    @notion_object_init_handler
     def __init__(self, request, data):
 
         """
@@ -332,7 +348,7 @@ class Page(_NotionBasicObject):
         """
         result = dict()
         for k, v in self.properties.items():
-            v: _PagePropertyObject
+            v: PagePropertyObject
             result[k] = v.get_value()
 
         return result

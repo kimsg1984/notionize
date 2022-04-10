@@ -1,7 +1,7 @@
-from notion_api.properties_basic import _DbPropertyObject
-from notion_api.functions import _from_plain_text_to_rich_text_array
+from notion_api.properties_basic import DbPropertyObject
+from notion_api.functions import from_plain_text_to_rich_text_array
 
-class DbPropertyLastEditedTime(_DbPropertyObject):
+class DbPropertyLastEditedTime(DbPropertyObject):
     """
     'DbPropertyLastEditedTime'
     """
@@ -9,7 +9,7 @@ class DbPropertyLastEditedTime(_DbPropertyObject):
     _mutable = False
 
 
-class DbPropertyCreatedBy(_DbPropertyObject):
+class DbPropertyCreatedBy(DbPropertyObject):
     """
     'DbPropertyCreatedBy'
     """
@@ -17,7 +17,7 @@ class DbPropertyCreatedBy(_DbPropertyObject):
     _mutable = False
 
 
-class DbPropertyCreatedTime(_DbPropertyObject):
+class DbPropertyCreatedTime(DbPropertyObject):
     """
     'DbPropertyCreatedTime'
     """
@@ -25,7 +25,7 @@ class DbPropertyCreatedTime(_DbPropertyObject):
     _mutable = False
 
 
-class DbPropertyLastEditedBy(_DbPropertyObject):
+class DbPropertyLastEditedBy(DbPropertyObject):
     """
     'DbPropertyLastEditedBy'
     """
@@ -33,7 +33,7 @@ class DbPropertyLastEditedBy(_DbPropertyObject):
     _mutable = False
 
 
-class DbPropertyRollup(_DbPropertyObject):
+class DbPropertyRollup(DbPropertyObject):
     """
     'DbPropertyRollup'
     """
@@ -41,7 +41,7 @@ class DbPropertyRollup(_DbPropertyObject):
     _mutable = False
 
 
-class DbPropertyPeople(_DbPropertyObject):
+class DbPropertyPeople(DbPropertyObject):
     """
     'DbPropertyPeople'
     """
@@ -50,7 +50,7 @@ class DbPropertyPeople(_DbPropertyObject):
     _input_validation = (list, )
 
 
-class DbPropertyCheckbox(_DbPropertyObject):
+class DbPropertyCheckbox(DbPropertyObject):
     """
     'DbPropertyCheckbox'
     """
@@ -59,7 +59,7 @@ class DbPropertyCheckbox(_DbPropertyObject):
     _input_validation = (bool, )
 
 
-class DbPropertyRelation(_DbPropertyObject):
+class DbPropertyRelation(DbPropertyObject):
     """
     'DbPropertyRelation'
     """
@@ -67,7 +67,7 @@ class DbPropertyRelation(_DbPropertyObject):
     _mutable = False
 
 
-class DbPropertyFormula(_DbPropertyObject):
+class DbPropertyFormula(DbPropertyObject):
     """
     'DbPropertyFormula'
     """
@@ -75,7 +75,7 @@ class DbPropertyFormula(_DbPropertyObject):
     _mutable = False
 
 
-class DbPropertyUrl(_DbPropertyObject):
+class DbPropertyUrl(DbPropertyObject):
     """
     'DbPropertyUrl'
     """
@@ -84,7 +84,7 @@ class DbPropertyUrl(_DbPropertyObject):
     _input_validation = (str, )
 
 
-class DbPropertyEmail(_DbPropertyObject):
+class DbPropertyEmail(DbPropertyObject):
     """
     'DbPropertyEmail'
     """
@@ -93,7 +93,7 @@ class DbPropertyEmail(_DbPropertyObject):
     _input_validation = (str, )
 
 
-class DbPropertyPhoneNumber(_DbPropertyObject):
+class DbPropertyPhoneNumber(DbPropertyObject):
     """
     'DbPropertyPhoneNumber'
     """
@@ -102,7 +102,7 @@ class DbPropertyPhoneNumber(_DbPropertyObject):
     _input_validation = (str, )
 
 
-class DbPropertyFiles(_DbPropertyObject):
+class DbPropertyFiles(DbPropertyObject):
     """
     'DbPropertyFiles'
     """
@@ -111,7 +111,7 @@ class DbPropertyFiles(_DbPropertyObject):
     _input_validation = (list, )
 
 
-class DbPropertyDate(_DbPropertyObject):
+class DbPropertyDate(DbPropertyObject):
     """
     'DbPropertyDate'
     """
@@ -120,7 +120,7 @@ class DbPropertyDate(_DbPropertyObject):
     _input_validation = (dict, )
 
 
-class DbPropertyMultiSelect(_DbPropertyObject):
+class DbPropertyMultiSelect(DbPropertyObject):
     """
     'DbPropertyMultiSelect'
     """
@@ -129,7 +129,7 @@ class DbPropertyMultiSelect(_DbPropertyObject):
     _input_validation = (list, )
 
 
-class DbPropertySelect(_DbPropertyObject):
+class DbPropertySelect(DbPropertyObject):
     """
     'DbPropertySelect'
     """
@@ -138,7 +138,7 @@ class DbPropertySelect(_DbPropertyObject):
     _input_validation = (dict, )
 
 
-class DbPropertyText(_DbPropertyObject):
+class DbPropertyText(DbPropertyObject):
     """
     'DbPropertyText'
     """
@@ -146,8 +146,20 @@ class DbPropertyText(_DbPropertyObject):
     _mutable = True
     _input_validation = (str, list)
 
+    def _convert_to_update(self, value: str):
+        """
+        convert value to 'text' update from.
 
-class DbPropertyTitle(_DbPropertyObject):
+        :param value: str or list
+        :return: dictionary
+        """
+        if type(value) is str:
+            return {'rich_text': from_plain_text_to_rich_text_array(value)}
+        elif type(value) is list:
+            return value
+
+
+class DbPropertyTitle(DbPropertyObject):
     """
     'DbPropertyTitle'
     """
@@ -157,20 +169,15 @@ class DbPropertyTitle(_DbPropertyObject):
 
     def _convert_to_update(self, value: str):
         """
-        convert value to 'rich_text' update from.
+        convert value to 'title' update from.
 
-        to make some more specific, 'inheritance' should overide this method.
-
-        ex) some_number_property._convert_to_update(123):
-            return {'number': 123}
-
-        :param value: nay of type
+        :param value: str
         :return: dictionary
         """
-        return {'title': _from_plain_text_to_rich_text_array(value)}
+        return {'title': from_plain_text_to_rich_text_array(value)}
 
 
-class DbPropertyNumber(_DbPropertyObject):
+class DbPropertyNumber(DbPropertyObject):
     """
     'DbPropertyNumber'
     """

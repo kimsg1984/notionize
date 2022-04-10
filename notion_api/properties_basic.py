@@ -1,7 +1,7 @@
-from notion_api.functions import _from_rich_text_array_to_plain_text, _from_plain_text_to_rich_text_array
+from notion_api.functions import from_rich_text_array_to_plain_text, from_plain_text_to_rich_text_array, pdir
 
-from notion_api.object_adt import MutableProperty, _ListObject
-from notion_api.object_basic import _NotionObject
+from notion_api.object_adt import MutableProperty, ListObject
+from notion_api.object_basic import NotionObject
 
 _log = __import__('logging').getLogger(__name__)
 
@@ -22,38 +22,38 @@ class TitleProperty(MutableProperty):
 
     def __get__(self, obj, objtype=None):
         _log.debug(f"{self}, {obj}")
-        return _from_rich_text_array_to_plain_text(getattr(obj, self.private_name))
+        return from_rich_text_array_to_plain_text(getattr(obj, self.private_name))
 
     def __set__(self, obj, value):
         if type(value) == str:
-            value = _from_plain_text_to_rich_text_array(value)
+            value = from_plain_text_to_rich_text_array(value)
 
         super().__set__(obj, value)
 
 
-class _PropertyObject(_NotionObject):
+class _PropertyObject(NotionObject):
     """
     Basic Object for Data and Page Properties.
     """
     # to find which object is proper, uses '_type_defined' while assigning event.
     _type_defined = ''
 
-    def __new__(cls, obj, data, parent_type, force_new=False):
+    def __new__(cls, obj, data, parent_type, name:str, force_new=False):
         new_cls = super(_PropertyObject, cls)
         ins = new_cls.__new__(cls, data, force_new=force_new)
 
         return ins
 
-    def __init__(self, parent: 'PropertiesProperty', data, parent_type, force_new=False):
+    def __init__(self, parent: 'PropertiesProperty', data, parent_type, name: str, force_new=False):
         self._parent: 'PropertiesProperty' = parent
         self._parent_type = parent_type
+
+        # page properties don't have 'name' property. This method assign '_name' property manually.
+        self._name = name
         super().__init__(data)
 
-    def __repr__(self):
-        return f"<'{self.__class__.__name__}: {self.name}' at {hex(id(self))}>"
 
-
-class _PagePropertyObject(_PropertyObject):
+class PagePropertyObject(_PropertyObject):
     """
     Basic Object for Data and Page Properties.
     """
@@ -61,21 +61,31 @@ class _PagePropertyObject(_PropertyObject):
     # to figure out which object is 'proper', uses '_type_defined' while assigning event.
     _type_defined = ''
 
+    def __repr__(self):
+        # return f"<'{self.__class__.__name__}:' at {hex(id(self))}>"
+        return f"<'{self.__class__.__name__}: {self._name}' at {hex(id(self))}>"
+
     def _update(self, property_name, data):
         self._parent._update(self.name, {property_name: data})
 
     def get_value(self):
 
         value = getattr(self, self.type)
-        if isinstance(value, dict):
-            return value['name'].replace(u'\xa0', u' ')
-        elif isinstance(value, (list, _ListObject)):
+
+        if hasattr(value, 'keys'):
+            if 'name' in value:
+                return value['name'].replace(u'\xa0', u' ')
+            else:
+                _log.info(f"{self}, {self.type}, {value.keys()}")
+                return value
+
+        elif isinstance(value, (list, ListObject)):
             return tuple([e['name'].replace(u'\xa0', u' ') for e in value])
         else:
             return value
 
 
-class _DbPropertyObject(_PropertyObject):
+class DbPropertyObject(_PropertyObject):
     """
     Basic Object for Data and Page Properties.
     """
@@ -107,3 +117,6 @@ class _DbPropertyObject(_PropertyObject):
         :return: dictionary
         """
         return {self._type_defined: value}
+
+    def __repr__(self):
+        return f"<'{self.__class__.__name__}: {self.name}' at {hex(id(self))}>"
