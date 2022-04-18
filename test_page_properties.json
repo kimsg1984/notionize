@@ -1,0 +1,200 @@
+"properties": {
+    "Email": {
+        "id": ";b?x",
+        "type": "email",
+        "email": "kimsg1984@gmail.com"
+    },
+    "datetime_edited": {
+        "id": ">{OQ",
+        "type": "last_edited_time",
+        "last_edited_time": "2022-03-24T20:33:00.000Z"
+    },
+    "text": {
+        "id": "AT;Z",
+        "type": "rich_text",
+        "rich_text": [
+            {
+                "type": "text",
+                "text": {
+                    "content": "some text",
+                    "link": null
+                },
+                "annotations": {
+                    "bold": false,
+                    "italic": false,
+                    "strikethrough": false,
+                    "underline": false,
+                    "code": false,
+                    "color": "default"
+                },
+                "plain_text": "some text",
+                "href": null
+            }
+        ]
+    },
+    "created_user": {
+        "id": "GpNc",
+        "type": "created_by",
+        "created_by": {
+            "object": "user",
+            "id": "1ecee6f3-2456-4778-8fca-f9c77f34f2b9",
+            "name": "SeonGyo Kim",
+            "avatar_url": "https://lh6.googleusercontent.com/-E1qM6QswLQs/AAAAAAAAAAI/AAAAAAAAAAA/ACHi3rejgufje_pPuYxyfstfE2XgSdUf-A/photo.jpg",
+            "type": "person",
+            "person": {
+                "email": "11900332@iscu.ac.kr"
+            }
+        }
+    },
+    "Url": {
+        "id": "JVG=",
+        "type": "url",
+        "url": "https://notion.so"
+    },
+    "MultiSelect": {
+        "id": "JgEO",
+        "type": "multi_select",
+        "multi_select": [
+            {
+                "id": "JGcK",
+                "name": "moption2",
+                "color": "gray"
+            }
+        ]
+    },
+    "Datetime": {
+        "id": "P<c{",
+        "type": "date",
+        "date": {
+            "start": "2022-03-24",
+            "end": "2022-03-26",
+            "time_zone": null
+        }
+    },
+    "User": {
+        "id": "SIkj",
+        "type": "people",
+        "people": [
+            {
+                "object": "user",
+                "id": "1ecee6f3-2456-4778-8fca-f9c77f34f2b9",
+                "name": "SeonGyo Kim",
+                "avatar_url": "https://lh6.googleusercontent.com/-E1qM6QswLQs/AAAAAAAAAAI/AAAAAAAAAAA/ACHi3rejgufje_pPuYxyfstfE2XgSdUf-A/photo.jpg",
+                "type": "person",
+                "person": {
+                    "email": "11900332@iscu.ac.kr"
+                }
+            }
+        ]
+    },
+    "Select": {
+        "id": "VKmm",
+        "type": "select",
+        "select": {
+            "id": "[m>]",
+            "name": "option1",
+            "color": "default"
+        }
+    },
+    "Number": {
+        "id": "^r{Z",
+        "type": "number",
+        "number": 101
+    },
+    "Relation": {
+        "id": "_GTP",
+        "type": "relation",
+        "relation": []
+    },
+    "user_last_edited": {
+        "id": "jI}<",
+        "type": "last_edited_by",
+        "last_edited_by": {
+            "object": "user",
+            "id": "1ecee6f3-2456-4778-8fca-f9c77f34f2b9",
+            "name": "SeonGyo Kim",
+            "avatar_url": "https://lh6.googleusercontent.com/-E1qM6QswLQs/AAAAAAAAAAI/AAAAAAAAAAA/ACHi3rejgufje_pPuYxyfstfE2XgSdUf-A/photo.jpg",
+            "type": "person",
+            "person": {
+                "email": "11900332@iscu.ac.kr"
+            }
+        }
+    },
+    "Checkbox": {
+        "id": "lPJW",
+        "type": "checkbox",
+        "checkbox": true
+    },
+    "Formula": {
+        "id": "mv\\K",
+        "type": "formula",
+        "formula": {
+            "type": "boolean",
+            "boolean": true
+        }
+    },
+    "datetime_created": {
+        "id": "s}SB",
+        "type": "created_time",
+        "created_time": "2022-03-19T03:17:00.000Z"
+    },
+    "PhoneNumber": {
+        "id": "ue?<",
+        "type": "phone_number",
+        "phone_number": "01065033680"
+    },
+    "File": {
+        "id": "}Vg>",
+        "type": "files",
+        "files": [
+            {
+                "name": "1.png",
+                "type": "file",
+                "file": {
+                    "url": "https://s3.us-west-2.amazonaws.com/secure.notion-static.com/9752dc7f-434f-4c6d-937b-a8ef21b10107/1.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=AKIAT73L2G45EIPT3X45%2F20220329%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20220329T130959Z&X-Amz-Expires=3600&X-Amz-Signature=439ec111c1fa0a5de2354c847c5b6551fb2e4142c145f2cbd4e876b90cc70a85&X-Amz-SignedHeaders=host&x-id=GetObject",
+                    "expiry_time": "2022-03-29T14:09:59.644Z"
+                }
+            },
+            {
+                "name": "7.html",
+                "type": "file",
+                "file": {
+                    "url": "https://s3.us-west-2.amazonaws.com/secure.notion-static.com/4b294602-9eda-459c-b9a7-c110f11206d2/7.html?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=AKIAT73L2G45EIPT3X45%2F20220329%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20220329T130959Z&X-Amz-Expires=3600&X-Amz-Signature=df9141c2b71057a5374b196316fa6c1b49811028ef115def9c8c05ad9c4e280c&X-Amz-SignedHeaders=host&x-id=GetObject",
+                    "expiry_time": "2022-03-29T14:09:59.649Z"
+                }
+            }
+        ]
+    },
+    "Rollup": {
+        "id": "}sm=",
+        "type": "rollup",
+        "rollup": {
+            "type": "array",
+            "array": [],
+            "function": "show_original"
+        }
+    },
+    "Title": {
+        "id": "title",
+        "type": "title",
+        "title": [
+            {
+                "type": "text",
+                "text": {
+                    "content": "TitleFixed1",
+                    "link": null
+                },
+                "annotations": {
+                    "bold": false,
+                    "italic": false,
+                    "strikethrough": false,
+                    "underline": false,
+                    "code": false,
+                    "color": "default"
+                },
+                "plain_text": "TitleFixed1",
+                "href": null
+            }
+        ]
+    }
+},
