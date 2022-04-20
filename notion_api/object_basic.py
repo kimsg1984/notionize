@@ -147,4 +147,3 @@ def _set_proper_descriptor(cls: Any, key: str, value: Any) -> None:
 
 
 
-K
