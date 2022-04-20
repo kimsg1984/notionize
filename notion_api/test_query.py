@@ -4,6 +4,7 @@ import logging
 
 # logging.basicConfig(format=log_format, level=logging.DEBUG)
 log_format = '%(lineno)s|%(levelname)s] %(funcName)s(): %(message)s'
+# logging.basicConfig(format=log_format, level=logging.ERROR)
 logging.basicConfig(format=log_format, level=logging.INFO)
 # logging.basicConfig(format=log_format, level=logging.WARN)
 
@@ -27,11 +28,15 @@ from typing import Dict
 notion = notion_api.notion.Notion('secret_rvDkx9qH8AVG3aKBVwZ4r5Byo75uoAPMrQ1I6bo4d6G')
 test_table = notion.get_database('44d6b8fda2734f04968a771a79f97fb6')
 
+datetime_case = ['2022-03-23', '2022-03-24', '2022-03-25', '2022-03-26',
+                               '2022-03-25T12:00', '2022-03-25T12:00:00+09:00', '2022-03-25T15:00:00']
+text_case = ['TitleFixed', 'TitleFixed1', 'itleFixed1', 'some text', 'kimsg1984@gmail.com', '01065033680',
+               'https://notion.so', 'option1', 'moption2', 'string']
+
 testcase_sample = {
-    'string': ['TitleFixed', 'TitleFixed1', 'itleFixed1', 'some text', 'kimsg1984@gmail.com', '01065033680',
-               'https://notion.so', 'option1', 'moption2'],
+    'string': text_case,
     'boolean (only true)': [None],  # implimented no parameter
-    'number': [100, 101, 102],
+    'number': [100, 101, 102, 1, 2],
     'boolean': [True, False],
     'string(enum)': '',
     'object(number filter condition)': '',
@@ -40,76 +45,130 @@ testcase_sample = {
     'object(checkbox filter condition)': '',
     'object(text filter condition)': '',
     'object': '',
-    'string (ISO 8601 date)': ['2022-03-23', '2022-03-24', '2022-03-25', '2022-03-26',
-                               '2022-03-25T12:00', '2022-03-25T12:00:00+09:00', '2022-03-25T15:00:00'],
+    'string (ISO 8601 date)': datetime_case,
     'object (empty)': [{}, ],
+    'object (number filter condition)': [1, 2],
+    'object (checkbox filter condition)': [True, False],
+    'object (date filter condition)': datetime_case,
+    'object (text filter condition)': ['string', ],
 }
 
 
-def query_test(test_type: str) -> None:
+def query_test(test_type: str, test_all=False) -> None:
     # done
     filter_table = notion.get_database('e8108c53c9cf42259878954a289842fe')
     test_table = notion.get_database('44d6b8fda2734f04968a771a79f97fb6')  # test1
 
-    # columns = ('Done', 'property_name', 'object_type', 'value_type', 'property_type')
-    # result = filter_table.get_as_tuples(filter_table.query(), columns)
     result: dict = filter_table.get_as_dictionaries(filter_table._filter_and_sort())
-    # df = pd.DataFrame(result[1:], columns=columns)
-    # pprint(result)
-
-    # object_type = ['text', 'timestamp' 'formula' 'relation' 'files' 'rollup' 'multi_select' 'date'
-    #                        'people' 'select' 'checkbox' 'number']
 
     test_properties = {v._type_defined: k for k, v in test_table.properties.items()}
-    print(test_properties.keys())
-    a = ['email', 'last_edited_time', 'rich_text', 'created_by', 'url', 'multi_select', 'date', 'people', 'select',
+    """
+    ['email', 'last_edited_time', 'rich_text', 'created_by', 'url', 'multi_select', 'date', 'people', 'select',
          'number', 'relation', 'last_edited_by', 'checkbox', 'formula', 'created_time', 'phone_number', 'files',
          'rollup', 'title']
+    """
+    print('test_properties', test_properties.keys())
+    # print(*[f"{r['object_type']}: {r['property_name']}" for r in result], sep='\n')
 
 
-    test_rows = [r for r in result if (r['object_type'] == test_type) and (r['Done'] == False)]
+    if test_all:
+        test_rows = [r for r in result if (r['object_type'] == test_type)]
+    else:
+        test_rows = [r for r in result if (r['object_type'] == test_type) and (r['메소드'] is False)]
 
-    # print(result)
+    print('test_rows', test_rows)
 
     for r in test_rows:
-        done = r['Done']
-        property_name = r['property_name']
-        object_type = r['object_type']
-        value_type = r['value_type']
-        property_type = r['property_type']
+        test_each_row(r, test_properties, result)
 
 
-        for property in property_type:
-            test_column = test_properties[property]
-            print(f'{object_type}: {property_name}({value_type}), {property}({test_column})')
-            for test_value in testcase_sample[value_type]:
+def test_formula(r, formula_type, test_type):
+    done = r['메소드']
+    property_name = r['property_name']
+    object_type = r['object_type']
+    value_type = r['value_type']
+    property_type = r['property_type']
 
+    for property in property_type:
+        "formula: string(object (text filter condition)), formula(Formula_number)"
+        test_column = f"Formula_{property}"
+
+        if property == 'title':
+            continue
+        elif property == 'rich_text':
+            test_column = 'Formula_string'
+        else:
+            continue
+        print(f'{object_type}: {property_name}({value_type}), {property}({test_column}), test_value: {test_type}')
+        for test_value in testcase_sample[value_type]:
+            filter_function = getattr(query, f'filter_formula')
+            # print('filter_function: ', filter_function, 'test_value:', test_value)
+            condition = filter_function(formula_type, test_column)
+            try:
+                method = getattr(condition, property_name)
+            except Exception as e:
+                print('condition:', condition)
+                raise e
+            # print(f'method: {method}')
+            if (not test_value) and (not (type(test_value) == bool)):
+                method()
+            else:
+                method(test_value)
+            db_filter = filter()
+            db_filter.add(condition)
+            result = test_table.get_as_dictionaries(test_table._filter_and_sort(notion_filter=db_filter))
+            for r in result:
+                print('     value:', test_value, f'{test_column}:', r[test_column])
+
+def test_each_row(r, test_properties, result, formula=False):
+    done = r['메소드']
+    property_name = r['property_name']
+    object_type = r['object_type']
+    value_type = r['value_type']
+    property_type = r['property_type']
+
+    for property in property_type:
+        test_column = test_properties[property]
+        print(f'{object_type}: {property_name}({value_type}), {property}({test_column})')
+        for test_value in testcase_sample[value_type]:
+            if object_type in ['created_time', 'last_edited_time']:
+                filter_function = getattr(query, f'filter_date')
+            else:
                 filter_function = getattr(query, f'filter_{object_type}')
 
-                if object_type in ['text', 'date', 'people', 'timestamp']:
-                    if object_type == 'date':
-                        condition = filter_function(property, test_column, timezone='+09:00')
-                    else:
-                        condition = filter_function(property, test_column)
+            if object_type in (['text', 'people'] + ['date' 'created_time', 'last_edited_time]']):
+                if object_type in ['date', 'created_time', 'last_edited_time']:
+                    condition = filter_function(property, test_column, timezone='+09:00')
                 else:
-                    condition = filter_function(test_column)
+                    condition = filter_function(property, test_column)
+            elif object_type == 'formula':
+                if property_name == 'string':
+                    test_rows_sub = [r for r in result if (r['object_type'] == 'text')]
+                else:
+                    test_rows_sub = [r for r in result if (r['object_type'] == property_name)]
+                # print('property_name', property_name, 'test_rows_sub', test_rows_sub)
+                for r_sub in test_rows_sub:
+                    test_formula(r_sub, property_name, value_type)
+                    # break
+                continue
 
+            else:
+                condition = filter_function(test_column)
+            try:
                 method = getattr(condition, property_name)
-                # print(f'method: {method}')
-                if not test_value:
-                    method()
-                else:
-                    method(test_value)
-                # print('     ', test_value)
-                db_filter = filter()
-                db_filter.add(condition)
-                result = test_table.get_as_dictionaries(test_table._filter_and_sort(notion_filter=db_filter))
-                for r in result:
-                    # print('     value:', test_value, f'{test_column}:', r)
-                    print('     value:', test_value, f'{test_column}:', r[test_column])
-                break
-            break
-
+            except Exception as e:
+                print('condition:', condition)
+                raise e
+            # print(f'method: {method}, test_value: {test_value}')
+            if (not test_value) and (not (type(test_value) == bool)):
+                method()
+            else:
+                method(test_value)
+            db_filter = filter()
+            db_filter.add(condition)
+            result = test_table.get_as_dictionaries(test_table._filter_and_sort(notion_filter=db_filter))
+            for r in result:
+                print('     value:', test_value, f'{test_column}:', r[test_column])
 
 class Testfilter_text(TestCase):
     def dtest_property(self) -> None:
@@ -167,11 +226,16 @@ class Query_test(TestCase):
     def dtest_multi_select(self) -> None:
         query_test('multi_select')
 
-    def dtest_date(self) -> None:
-        query_test('date')
+    def test_date(self) -> None:
+        # query_test('date', test_all=True)
+        # query_test('last_edited_time', test_all=True)
+        query_test('created_time')
 
     def dtest_files(self) -> None:
-        query_test('files')
+        query_test('files', test_all=True)
+
+    def test_formula(self) -> None:
+        query_test('formula')
 
     def dtest_query_existance(self) -> None:
         test_table = notion.get_database('44d6b8fda2734f04968a771a79f97fb6')
@@ -203,7 +267,8 @@ class Query_test(TestCase):
             for symbol in test_symbols:
                 query_test_syntax(syntax.format(prop, symbol, value), [prop])
 
-    def test_query_invalid(self):
+    # waiting
+    def wtest_query_invalid(self):
         invalid_syntax = (
             # 'True',
             # 'False',
@@ -211,9 +276,9 @@ class Query_test(TestCase):
             # 'Title',
             # 'Title == "t" or Number == 1',
             # 'Title == "t" or Number == 1 or Title == 1',
-#             """(Title == 1
-# or
-# Number == 1)""",
+            #             """(Title == 1
+            # or
+            # Number == 1)""",
 
             # "'Title' in Title",
             # "(Number < 2) < 3",
@@ -231,3 +296,4 @@ class Query_test(TestCase):
             except Exception as e:
                 # log.info('[Error]' + str(e))
                 log.info(traceback.format_exc())
+

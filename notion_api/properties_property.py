@@ -1,16 +1,18 @@
 from notion_api.object_adt import DictionaryObject, ImmutableProperty
 from notion_api.object_basic import _log
-from notion_api.properties_basic import _PropertyObject, PagePropertyObject, DbPropertyObject
+from notion_api.properties_basic import PropertyObject, PagePropertyObject, DbPropertyObject
 
 import notion_api.properties_page
 import notion_api.properties_db
+from typing import Any
+from typing import Dict
 
 
 class PropertiesProperty(DictionaryObject, ImmutableProperty):
     """
     'PropertiesProperty' for 'Database' and 'Page'. Mutable Type
     """
-    def __new__(cls, object_type: str):
+    def __new__(cls, object_type: str) -> 'PropertiesProperty':
 
         super_cls = super(PropertiesProperty, cls)
         notion_ins = super_cls.__new__(cls)
@@ -51,7 +53,7 @@ class PropertiesProperty(DictionaryObject, ImmutableProperty):
         elif self._parent_object_type == 'page':
             properties_mapper = page_properties_mapper
         else:
-            raise NotImplemented(f"'{self._parent_object_type}' object is not implemented")
+            raise NotImplementedError(f"'{self._parent_object_type}' object is not implemented")
 
         for k, v in value.items():
             property_type: str = v['type']
@@ -60,8 +62,8 @@ class PropertiesProperty(DictionaryObject, ImmutableProperty):
 
             if property_type in properties_mapper:
 
-                property_cls: _PropertyObject = properties_mapper.get(property_type)
-                property_ins: _PropertyObject = property_cls(self, v, parent_type=self._parent_object_type, name=k)
+                property_cls: PropertyObject = properties_mapper.get(property_type)
+                property_ins: PropertyObject = property_cls(self, v, parent_type=self._parent_object_type, name=k)
             else:
                 if self._parent_object_type == 'database':
                     property_ins: DbPropertyObject = DbPropertyObject(self, v, parent_type=self._parent_object_type,

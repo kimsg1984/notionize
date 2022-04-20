@@ -21,15 +21,17 @@ from typing import Type
 from notion_api.http_request import HttpRequest
 
 from notion_api.object_basic import NotionObject
+from notion_api.object_basic import ObjectProperty
+from notion_api.properties_basic import PropertyObject
 from notion_api.properties_property import PropertiesProperty
 from notion_api.functions import notion_object_init_handler
 from notion_api.properties_basic import TitleProperty, PagePropertyObject, DbPropertyObject
 from notion_api.object_adt import ImmutableProperty, MutableProperty
 
-from query import Query
-from query import filter
-from query import T_Filter
-from query import T_Sorts
+from notion_api.query import Query
+from notion_api.query import filter
+from notion_api.query import T_Filter
+from notion_api.query import T_Sorts
 
 from typing import Optional
 from typing import Any
@@ -150,6 +152,7 @@ class Database(NotionBasicObject):
 
     id = ImmutableProperty()
     created_time = ImmutableProperty()
+    # created_by = User()
     title = TitleProperty()
     icon = MutableProperty()
     cover = MutableProperty()
@@ -210,12 +213,12 @@ class Database(NotionBasicObject):
         sort_obj: List[Any]
 
         if notion_filter:
-            notion_filter = notion_filter._body
+            notion_filter = notion_filter.get_body()
         else:
             notion_filter = {'or': []}
 
         if sorts:
-           sort_obj = list(sorts._body)
+           sort_obj = list(sorts.get_body())
         else:
             sort_obj = list()
 
@@ -226,7 +229,7 @@ class Database(NotionBasicObject):
         if page_size:
             payload['page_size'] = page_size
 
-        id_raw = self.id.replace('-', '')
+        id_raw = str(self.id).replace('-', '')
         url = f'{self._api_url}{id_raw}/query'
         return QueriedPageIterator(self._request, url, payload)
 
@@ -354,3 +357,21 @@ class Page(NotionBasicObject):
         return result
 
 
+PropertiesProperty
+
+
+class User(NotionObject):
+    """
+    User Object
+    """
+    object = ImmutableProperty()
+    id = ImmutableProperty()
+
+
+
+    def __set__(self, owner: Any, value: Dict[str, Any]) -> None:
+
+        self.__set_name__(owner, 'user')
+
+        if not self._check_assigned(owner):
+            setattr(owner, self.private_name, dict())

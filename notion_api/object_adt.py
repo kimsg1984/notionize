@@ -1,5 +1,8 @@
 from typing import MutableMapping, MutableSequence
 from typing import Optional
+from typing import Dict
+from typing import Any
+from typing import KeysView
 
 
 from notion_api.exception import NotionApiPropertyException, NotionApiPropertyUnassignedException
@@ -48,7 +51,7 @@ class DictionaryObject(MutableMapping):
     '_DictionaryObject Descriptor' which used for 'Key-Value' pettern. Imutable is 'default'.
     """
 
-    def __init__(self, name, owner: '_NotionObject'=None, data: dict=None, mutable=False):
+    def __init__(self, name, owner: 'NotionObject'=None, data: Optional[Dict[str, Any]]=None, mutable=False):
         """
         Initilize '_DictionaryObject'.
 
@@ -118,7 +121,7 @@ class DictionaryObject(MutableMapping):
             data[key] = value
             # update event.
 
-    def __delitem__(self, key):
+    def __delitem__(self, key: str) -> None:
 
         if self._mutable:
             del self._data[key]
@@ -126,10 +129,10 @@ class DictionaryObject(MutableMapping):
         else:
             raise NotionApiPropertyException('Immutable property could not be assigned')
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self._data)
 
-    def keys(self):
+    def keys(self) -> KeysView[str]:
         return self._data.keys()
 
 
@@ -191,7 +194,7 @@ class ImmutableProperty:
     Descriptor for property. User assignment is prohibited.
     """
 
-    def __init__(self, owner: object = None, name: str = ''):
+    def __init__(self, owner: Any = None, name: str = ''):
         """
         Initilize ImmutableProperty
 
@@ -228,7 +231,7 @@ class ImmutableProperty:
     def _check_assigned(self, obj: object) -> bool:
         return hasattr(obj, self.private_name)
 
-    def __set__(self, obj: object, value: object) -> None:
+    def __set__(self, obj: Any, value: Any) -> None:
         """
 
         :param obj:
@@ -241,7 +244,7 @@ class ImmutableProperty:
         else:
             self._update_event(obj, value)
 
-    def _update_event(self, obj, value):
+    def _update_event(self, obj: Any, value: Any) -> None:
         raise NotionApiPropertyException('Immutable Property could not be assigned')
 
 
@@ -249,6 +252,6 @@ class MutableProperty(ImmutableProperty):
     """
     Descriptor for property with 'update' event.
     """
-    def _update_event(self, obj, value):
+    def _update_event(self, obj: Any, value: Any) -> None:
         _log.debug(f"udate: self, obj, value {self}, {obj}, {value}")
         obj._update(self.public_name, value)

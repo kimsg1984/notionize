@@ -8,14 +8,15 @@ log_format = '%(asctime)s [%(filename)s:%(lineno)s|%(levelname)s] %(funcName)s()
 # logging.basicConfig(format=log_format, level=logging.DEBUG)
 logging.basicConfig(format=log_format, level=logging.INFO)
 
-
 import notion_api.notion
 from notion_api.objects import Database
 from notion_api.objects import Page
 from notion_api.functions import pdir
 from query import sorts
 from query import sort_by_timestamp
+
 notion = notion_api.notion.Notion('secret_rvDkx9qH8AVG3aKBVwZ4r5Byo75uoAPMrQ1I6bo4d6G')
+
 
 # log = notion_api.notion._log
 # # log.setLevel(logging.DEBUG)
@@ -67,7 +68,6 @@ class TestDatabase(TestCase):
         property_table = notion.get_database('d3bf7c7d8c714f13b31638bfbcd13b36')
         d3 = notion.get_database('44d6b8fda2734f04968a771a79f97fb6')  # test1
 
-
         # print(property_table.id)
         # print(d3.id)
         # print(property_table.created_by)
@@ -112,7 +112,6 @@ class TestDatabase(TestCase):
         pprint(props_dict)
         # # print(*props_dict, sep="\n")
 
-
     def test_get_databae(self):
         import notion_api.notion
         from pprint import pprint
@@ -139,7 +138,7 @@ class TestDatabase(TestCase):
         n.type = 'number'
 
     def test_create_page(self):
-        test_table = notion.get_database('44d6b8fda2734f04968a771a79f97fb6') # Tast Case Table1 : Full Test
+        test_table = notion.get_database('44d6b8fda2734f04968a771a79f97fb6')  # Tast Case Table1 : Full Test
         print(test_table.properties.keys())
 
         properties = {
@@ -174,3 +173,8 @@ class Test_PropertyObject(TestCase):
         print(pdir(dn, 'hide'))
 
 
+class TestUser(TestCase):
+    def test_user(self) -> None:
+        test_table = notion.get_database('f7001a895f39403eae3d90b6451639f4')  # Tast Case Table2 : Simple Test
+        print(test_table.last_edited_by.keys())
+        print(test_table.last_edited_by['object'])

@@ -31,29 +31,29 @@ class TitleProperty(MutableProperty):
         super().__set__(obj, value)
 
 
-class _PropertyObject(NotionObject):
+class PropertyObject(NotionObject):
     """
     Basic Object for Data and Page Properties.
     """
     # to find which object is proper, uses '_type_defined' while assigning event.
     _type_defined = ''
 
-    def __new__(cls, obj, data, parent_type, name:str, force_new=False):
-        new_cls = super(_PropertyObject, cls)
+    def __new__(cls, obj, data, parent_type, name: str, force_new=False):
+        new_cls = super(PropertyObject, cls)
         ins = new_cls.__new__(cls, data, force_new=force_new)
 
         return ins
 
-    def __init__(self, parent: 'PropertiesProperty', data, parent_type, name: str, force_new=False):
-        self._parent: 'PropertiesProperty' = parent
+    def __init__(self, parent: 'PropertiesProperty', data, parent_type, name: str, force_new=False):  # type: ignore
+        self._parent: 'PropertiesProperty' = parent  # type: ignore
         self._parent_type = parent_type
 
         # page properties don't have 'name' property. This method assign '_name' property manually.
         self._name = name
-        super().__init__(data)
+        super().__init__(data)  # type: ignore
 
 
-class PagePropertyObject(_PropertyObject):
+class PagePropertyObject(PropertyObject):
     """
     Basic Object for Data and Page Properties.
     """
@@ -76,7 +76,7 @@ class PagePropertyObject(_PropertyObject):
             if 'name' in value:
                 return value['name'].replace(u'\xa0', u' ')
             else:
-                _log.info(f"{self}, {self.type}, {value.keys()}")
+                # _log.info(f"{self}, {self.type}, {value.keys()}")
                 return value
 
         elif isinstance(value, (list, ListObject)):
@@ -85,7 +85,7 @@ class PagePropertyObject(_PropertyObject):
             return value
 
 
-class DbPropertyObject(_PropertyObject):
+class DbPropertyObject(PropertyObject):
     """
     Basic Object for Data and Page Properties.
     """

@@ -34,7 +34,6 @@ reference:
     https://greentreesnakes.readthedocs.io/en/latest/nodes.html
 
 """
-from _ast import AST, Expr, Module, BoolOp, Or, Compare, Eq, Constant, Name, Load, Num, Str, UnaryOp
 from typing import Dict, Union, List
 from typing import TypeVar
 from typing import List
@@ -45,16 +44,19 @@ from typing import Union
 from typing import Optional
 from typing import Generic
 from typing import Tuple
+from typing import get_type_hints
 
+import copy
 import abc
 import ast
 import _ast
+import time
 
 from notion_api import properties_basic
-from notion_api import properties_db
+from notion_api.properties_basic import DbPropertyObject
 from notion_api.functions import pdir
 from notion_api.exception import NotionApiQueoryException
-
+# from notion_api.object_adt import ChangeMroMeta
 # import typing
 # typing.Optional
 
@@ -124,7 +126,7 @@ class filter:
 
         assert issubclass(type(condition), FilterConditionABC), 'type: ' + str(type(condition))
         compound_obj: List[Any] = self._body[self.__bool_op]
-        compound_obj.append(dict(condition._body))
+        compound_obj.append(dict(condition.get_body()))
         return self
 
     def clear(self) -> 'filter':
@@ -137,6 +139,10 @@ class filter:
         self._body = {self.__bool_op: []}
         return self
 
+    def get_body(self) -> Dict[str, List['FilterConditionABC']]:
+        # log.info(self._body)
+        return copy.deepcopy(self._body)
+
     @property
     def bool_op(self) -> str:
         return self.__bool_op
@@ -147,26 +153,64 @@ class filter:
         self.__bool_op = compound_type
 
 
-class FilterConditionABC(metaclass=abc.ABCMeta):
+class ChangeMroMeta(abc.ABCMeta):
+    def __new__(cls, cls_name, cls_bases, cls_dict):
+        out_cls = super(ChangeMroMeta, cls).__new__(cls, cls_name, cls_bases, cls_dict)
+        out_cls._mro_fixed = tuple()
+        out_cls._set_mro = classmethod(cls._set_mro)
+        return out_cls
 
-    def __init__(self, property_name: str, property_type: str = '', **kwargs: Dict[str, Any]):
+    @staticmethod
+    def _set_mro(cls: object, mro: Tuple[object]) -> None:
+        default_mro = super(ChangeMroMeta, cls).mro()
+        new_mro = list()
+        new_mro.append(default_mro[0])  # assign class itself
+        for m in mro:
+            if m is not default_mro[0]:
+                new_mro.append(m)
+        for d in default_mro:
+            if d not in new_mro:
+                new_mro.append(d)
 
+        cls._mro_fixed = tuple(new_mro)
+        cls.__bases__ = cls.__bases__ + tuple()
+
+    def mro(cls):
+
+        if hasattr(cls, '_mro_fixed') and cls._mro_fixed:
+            mro = tuple(cls._mro_fixed)
+        else:
+            # default
+            mro = super(ChangeMroMeta, cls).mro()
+        return mro
+
+class FilterConditionABC(metaclass=ChangeMroMeta):
+
+    def __init__(self, property_name: str, property_type: Optional[str] = '', **kwargs: Dict[str, Any]):
         self._body: Dict[str, Any] = {
             'property': property_name,
-            property_type: dict()
+            str(property_type): dict()
         }
-        self._property_type: str = property_type
+        self._property_type: str = str(property_type)
 
+    def get_body(self) -> Dict[str, Any]:
+        return copy.deepcopy(self._body)
 
-# filters
+"""
+filters
+"""
 
 
 class SortObject:
     _body: Dict[str, Any] = {}
 
+    def get_body(self) -> Dict[str, Any]:
+        return copy.deepcopy(self._body)
+
 
 class FilterConditionEmpty(FilterConditionABC):
     data_type = ''
+
     def is_empty(self) -> 'FilterConditionEmpty':
         self._body[self._property_type]['is_empty'] = True
         return self
@@ -178,21 +222,21 @@ class FilterConditionEmpty(FilterConditionABC):
 
 class FilterConditionEquals(FilterConditionABC):
     @abc.abstractmethod
-    def equals(self, value):
+    def equals(self, value: Any) -> Any:
         pass
 
     @abc.abstractmethod
-    def does_not_equal(self, value):
+    def does_not_equal(self, value: Any) -> Any:
         pass
 
 
 class FilterConditionContains(FilterConditionABC):
     @abc.abstractmethod
-    def contains(self, value):
+    def contains(self, value: Any) -> Any:
         pass
 
     @abc.abstractmethod
-    def does_not_contain(self, value):
+    def does_not_contain(self, value: Any) -> Any:
         pass
 
 
@@ -238,9 +282,9 @@ class filter_text(FilterConditionEquals,
         ftext2 = filter_text(filter_text.TYPE_TEXT, 'Column1')
         """
 
-        super().__init__(property_type, property_name)
+        FilterConditionABC.__init__(self, str(property_name), property_type)
 
-    def equals(self, string: str):
+    def equals(self, string: str) -> 'filter_text':
         """
         Args:
             string: case sensitive
@@ -249,7 +293,7 @@ class filter_text(FilterConditionEquals,
         self._body[self._property_type]['equals'] = string
         return self
 
-    def does_not_equal(self, string: str):
+    def does_not_equal(self, string: str) -> 'filter_text':
         """
         Args:
             string: case sensitive
@@ -259,7 +303,7 @@ class filter_text(FilterConditionEquals,
         self._body[self._property_type]['does_not_equal'] = string
         return self
 
-    def contains(self, string: str):
+    def contains(self, string: str) -> 'filter_text':
         """
 
         Args:
@@ -271,7 +315,7 @@ class filter_text(FilterConditionEquals,
         self._body[self._property_type]['contains'] = string
         return self
 
-    def does_not_contain(self, string: str):
+    def does_not_contain(self, string: str) -> 'filter_text':
         """
 
         Args:
@@ -283,7 +327,7 @@ class filter_text(FilterConditionEquals,
         self._body[self._property_type]['does_not_contain'] = string
         return self
 
-    def starts_with(self, string: str):
+    def starts_with(self, string: str) -> 'filter_text':
         """
 
         Args:
@@ -295,7 +339,7 @@ class filter_text(FilterConditionEquals,
         self._body[self._property_type]['starts_with'] = string
         return self
 
-    def ends_with(self, string: str):
+    def ends_with(self, string: str) -> 'filter_text':
         """
         Args:
             string: case sensitive
@@ -315,8 +359,7 @@ class filter_number(FilterConditionEquals, FilterConditionEmpty):
         Args:
             property_name:
         """
-
-        super().__init__(property_name, property_type='number')
+        FilterConditionABC.__init__(self, property_name, property_type='number')
 
     def equals(self, number: int) -> 'filter_number':
         """
@@ -401,7 +444,7 @@ class filter_checkbox(FilterConditionEquals):
             property_name:
         """
 
-        super().__init__(property_name, property_type='checkbox')
+        FilterConditionABC.__init__(self, property_name, property_type='checkbox')
 
     def equals(self, boolean: bool) -> 'filter_checkbox':
         """
@@ -505,124 +548,181 @@ class filter_multi_select(FilterConditionContains, FilterConditionEmpty):
 class filter_date(FilterConditionEmpty):
     data_type = 'date'
 
-    def __init__(self, property_type: str, property_name: str, timezone: str=''):
+    def __init__(self, property_type: str, property_name: str, timezone: Optional[str] = ''):
         """
 
-        date filter requires 'timezone'. You should tail after 'datetime' like "2021-10-15T12:00:00+09:00" or
-        use the 'timezone' parameter. If 'timezone' set, filter checks your 'datetime' argument with 'timezone' or
-        not and tail it.
+        date filter requires 'timezone'. You should tail after 'datetime' like "2021-10-15T12:00:00+09:00" to set the
+        specific 'timezone' value. Module set the 'timezone' dynamically. So user doesn't need to set.  But if user want
+        to set manually, use 'timezone' parameter or after generating 'filter_date' instance, assign value on 'timezone'
+        property.
 
         :param property_type: 'date', 'created_time', 'last_edited_time'
         :param property_name: $property_name
-        :param timezone: '09:00', '+03:00', '-02:00'
+        :param timezone: Optional[str]. If is not set, module assign it from 'time.timezone' value.
+            ex) '09:00', '+03:00', '-02:00'
+
+        [USAGE]
+            filter_dt = filter_date(filter_date.TYPE_DATE, 'PropertyName')
+            filter_dt.equals("2021-05-10+09:00")
+
+            or
+
+            filter_dt = filter_date(filter_date.TYPE_DATE, 'PropertyName')
+            filter_dt.timezone = '+09:00'
+            filter_dt.equals("2021-05-10")
         """
 
         TYPE_DATE = 'date'
         TYPE_CREATED_TIME = 'created_time'
         TYPE_LAST_EDITED_TIME = 'last_edited_time'
 
-        self.time_zone = ''
+        assert property_type in [TYPE_DATE, TYPE_CREATED_TIME, TYPE_LAST_EDITED_TIME], \
+            f"'property_type' allows only 'date', 'created_time', and 'last_edited_time'"
+
+        if not timezone:
+            timezone = ''
+            timezone_int = -int(time.timezone / 60 / 60)
+            if timezone_int == 0:
+                timezone = '+00:00'
+            elif 0 < timezone_int:
+                timezone += '+'
+                timezone += str(timezone_int).zfill(2) + ':00'
+            elif timezone_int < 0:
+                timezone += str(timezone_int).zfill(3) + ':00'
+
+        self.timezone = timezone
+
+        """
+        'created_time' and 'last_edited_time' is 'Timestamp filter object' which has 'timestamp' property instead
+        'property' property.
+        {
+            "filter": {
+                "timestamp": "created_time",
+                "created_time": {
+                  "past_week": {}
+                }
+             }
+        }
+        """
+        if property_type in [TYPE_CREATED_TIME, TYPE_LAST_EDITED_TIME]:
+            self._body: Dict[str, Any] = {
+                'timestamp': property_type,
+                property_type: dict()
+            }
+            self._property_type: str = str(property_type)
+
+        # 'date' property
+        else:
+            FilterConditionABC.__init__(self, property_name, property_type=property_type)
+
+    @property
+    def timezone(self) -> str:
+        return self.__time_zone
+
+    @timezone.setter
+    def timezone(self, timezone: str) -> None:
         if timezone:
             if timezone[0] in ['+', '-']:
-                self.time_zone = timezone
-
+                self.__time_zone = timezone
             else:
-                self.time_zone = '+' + timezone
-        super().__init__(property_name, property_type=property_type)
+                self.__time_zone = '+' + timezone
 
-#     def equals(self, datetime: str):
-#         """
-#         Args:
-#             datetime: string(ISO 8601 date)
-#         Returns:
-# -
-#         Usage:
-#         filter_dt.equals("2021-05-10")
-#         filter_dt.equals("2021-05-10T12:00:00")
-#         filter_dt.equals("2021-10-15T12:00:00-07:00")
-#         filter_dt = filter_date(filter_date.TYPE_TEXT, 'date_column_name', time_zone='+09:00')
-#         """
-#
-#         if self.time_zone and len(datetime) < 10 and datetime[-6] not in ['+', '-']:
-#             datetime += self.time_zone
-#         self._body[self._property_type]['equals'] = datetime
-#         return self
+        # set emtpy timezone
+        else:
+            self.__time_zone = ''
 
-    def equals(self, datetime: str) -> None:
+    def equals(self, datetime: str) -> 'filter_date':
         """
         Args:
             datetime: string(ISO 8601 date.  "2021-05-10"  or "2021-05-10T12:00:00" or "2021-10-15T12:00:00-07:00")
         Returns:
 
+        Usage:
+            filter_dt.equals("2021-05-10")
+            filter_dt.equals("2021-05-10T12:00:00")
+            filter_dt.equals("2021-10-15T12:00:00-07:00")
+            filter_dt = filter_date(filter_date.TYPE_TEXT, 'date_column_name', time_zone='+09:00')
+
         """
 
-        if self.time_zone and 11 < len(datetime) and datetime[-6] not in ['+', '-']:
-            datetime += self.time_zone
+        if self.__time_zone and 11 < len(datetime) and datetime[-6] not in ['+', '-']:
+            datetime += self.__time_zone
 
         self._body[self._property_type]['equals'] = datetime
         return self
 
-    def before(self, datetime: str) -> None:
+    def before(self, datetime: str) -> 'filter_date':
         """
         Args:
             datetime: string(ISO 8601 date.  "2021-05-10"  or "2021-05-10T12:00:00" or "2021-10-15T12:00:00-07:00")
         Returns:
         """
-        if self.time_zone and len(datetime) < 10 and datetime[-6] not in ['+', '-']:
-            datetime += self.time_zone
+        if self.__time_zone and len(datetime) < 10 and datetime[-6] not in ['+', '-']:
+            datetime += self.__time_zone
         self._body[self._property_type]['before'] = datetime
+        return self
 
-    def after(self, datetime: str) -> None:
+    def after(self, datetime: str) -> 'filter_date':
         """
         Args:
             datetime: string(ISO 8601 date.  "2021-05-10"  or "2021-05-10T12:00:00" or "2021-10-15T12:00:00-07:00")
         Returns:
         """
-        if self.time_zone and len(datetime) < 10 and datetime[-6] not in ['+', '-']:
-            datetime += self.time_zone
-        self._body[self._property_type]['after'] = datetime\
+        if self.__time_zone and len(datetime) < 10 and datetime[-6] not in ['+', '-']:
+            datetime += self.__time_zone
+        self._body[self._property_type]['after'] = datetime
+        return self
 
-    def on_or_before(self, datetime: str) -> None:
+    def on_or_before(self, datetime: str) -> 'filter_date':
         """
         Args:
             datetime: string(ISO 8601 date.  "2021-05-10"  or "2021-05-10T12:00:00" or "2021-10-15T12:00:00-07:00")
         Returns:
         """
-        if self.time_zone and len(datetime) < 10 and datetime[-6] not in ['+', '-']:
-            datetime += self.time_zone
+        if self.__time_zone and len(datetime) < 10 and datetime[-6] not in ['+', '-']:
+            datetime += self.__time_zone
         self._body[self._property_type]['on_or_before'] = datetime
+        return self
 
-    def on_or_after(self, datetime: str) -> None:
+    def on_or_after(self, datetime: str) -> 'filter_date':
         """
         Args:
             datetime: string(ISO 8601 date.  "2021-05-10"  or "2021-05-10T12:00:00" or "2021-10-15T12:00:00-07:00")
         Returns:
         """
-        if self.time_zone and len(datetime) < 10 and datetime[-6] not in ['+', '-']:
-            datetime += self.time_zone
+        if self.__time_zone and len(datetime) < 10 and datetime[-6] not in ['+', '-']:
+            datetime += self.__time_zone
         self._body[self._property_type]['on_or_after'] = datetime
+        return self
 
-    def past_week(self) -> None:
+    def past_week(self) -> 'filter_date':
         self._body[self._property_type]['past_week'] = {}
+        return self
 
-    def past_month(self) -> None:
+    def past_month(self) -> 'filter_date':
         self._body[self._property_type]['past_month'] = {}
+        return self
 
-    def past_year(self) -> None:
+    def past_year(self) -> 'filter_date':
         self._body[self._property_type]['past_year'] = {}
+        return self
 
-    def next_week(self) -> None:
+    def next_week(self) -> 'filter_date':
         self._body[self._property_type]['next_week'] = {}
+        return self
 
-    def next_month(self) -> None:
+    def next_month(self) -> 'filter_date':
         self._body[self._property_type]['next_month'] = {}
+        return self
 
-    def next_year(self) -> None:
+    def next_year(self) -> 'filter_date':
         self._body[self._property_type]['next_year'] = {}
+        return self
 
 
 class filter_files(FilterConditionEmpty):
     data_type = 'files'
+
     def __init__(self, property_name: str):
         """
         initialize
@@ -633,13 +733,48 @@ class filter_files(FilterConditionEmpty):
         super().__init__(property_name, property_type='files')
 
 
-    """
-    create 'filter' and 'sorts' object with 'python expression'
+class filter_formula(filter_text, filter_checkbox, filter_number, filter_date, metaclass=ChangeMroMeta):  # type: ignore
+    data_type = 'formula'
 
-    :param query_statement: str
-    :return: (filter, sorts)
-    """
+    def __init__(self, property_type: str, property_name: str, timezone: Optional[str] = ''):
+        """
+        formula filter
 
+        :param property_type: 'string', 'checkbox', 'number', 'date'.
+        :param property_name: $property_name
+        :param timezone: '09:00', '+03:00', '-02:00' (only for 'date' filter).
+        """
+
+        TYPE_STRING = 'string'
+        TYPE_CHECKBOX = 'checkbox'
+        TYPE_NUMBER = 'number'
+        TYPE_DATE = 'date'
+
+        assert property_type in [TYPE_STRING, TYPE_CHECKBOX, TYPE_NUMBER, TYPE_DATE], \
+            f"property_type '{property_type}' is not allowed in 'filter_formula'. Please read the docstring."
+
+        if property_type == TYPE_DATE:
+            filter_date.__init__(self, property_type, property_name, timezone)
+            self._set_mro((filter_date, ))
+        elif property_type == TYPE_CHECKBOX:
+            filter_checkbox.__init__(self, property_name)
+            self._set_mro((filter_checkbox, ))
+        elif property_type == TYPE_NUMBER:
+            filter_number.__init__(self, property_name)
+            self._set_mro((filter_number, ))
+        elif property_type == TYPE_STRING:
+            filter_text.__init__(self, property_type, property_name)
+            self._set_mro((filter_text, ))
+
+    def get_body(self) -> Dict[str, Any]:
+        # self._body = [{'property': 'Formula_checkbox', 'checkbox': {'equals': True}}]
+        body: Dict[str, Any] = {'property': self._body['property']}
+        body['formula'] = {self._property_type: copy.deepcopy(self._body[self._property_type])}
+        # log.info(f"formula body: {self._body}")
+        return body
+"""
+SORTS
+"""
 
 class sorts:
 
@@ -839,7 +974,7 @@ def get_ast_attr(node: _ast.AST) -> Dict[str, _ast.AST]:
             type(getattr(node, e)) in ast_types_dict or type(getattr(node, e)) == list}
 
 
-def check_type(node: T_Node, node_type: str) -> bool:
+def check_ast_type(node: T_Node, node_type: str) -> bool:
     if type(node) not in ast_types_dict:
         return False
     return ast_types_dict[type(node)] == node_type
@@ -889,7 +1024,7 @@ class Query:
 
     """
 
-    def __init__(self, db_properties):
+    def __init__(self, db_properties: DbPropertyObject):
         self.properties = db_properties
         self._error_with_expr = ''
         self.expression = ''
@@ -900,13 +1035,13 @@ class Query:
         :param expr: _ast.UnaryOp
         :return: filter
         """
-        assert check_type(expr.op,
+        assert check_ast_type(expr.op,
                           'Not'), f"{self.get_error_comment(expr)} Invalid UnaryOp: {ast_types_dict[type(expr.op)]}"
-        assert check_type(expr.operand,
+        assert check_ast_type(expr.operand,
                           'Name'), f"{self.get_error_comment(expr)} after 'not' only 'property name' allow"
         return self.is_empty(expr.operand)  # type: ignore
 
-    def call_by_method_name(self, filter_ins: T_Filter, method_name: str, value: Optional[object]=None) -> T_Filter:
+    def call_by_method_name(self, filter_ins: T_Filter, method_name: str, value: Optional[object] = None) -> T_Filter:
         """
         call the 'method' by 'name' with value. Before call the method, check the 'method' in the filter.
         After calling, return 'filter instance'.
@@ -948,8 +1083,8 @@ class Query:
             comparator: T_Node = compare_node.comparators[0]
             left: _ast.Name = compare_node.left  # type: ignore
 
-            check_left: bool = check_type(left, 'Name')
-            check_comparator: bool = check_type(comparator, 'Name')
+            check_left: bool = check_ast_type(left, 'Name')
+            check_comparator: bool = check_ast_type(comparator, 'Name')
             # One of 'comparator' and 'left' should be '_ast.Name', which means compare with 'Property'.
             assert (check_left or check_comparator) and (sum((check_left, check_comparator)) == 1),  \
                 f"{self.get_error_comment(compare_node.left)} " \
@@ -1020,7 +1155,7 @@ class Query:
 
         node: _ast.Module = ast.parse(expression)
         display_ast_tree(node)
-        assert check_type(node, 'Module'), f"{self.get_error_comment(node)} Invalid expression"
+        assert check_ast_type(node, 'Module'), f"{self.get_error_comment(node)} Invalid expression"
         assert len(node.body) == 1, f"{self.get_error_comment(node)} Invalid expression"
 
         expr: _ast.Expr = node.body[0]  # type: ignore
@@ -1035,30 +1170,30 @@ class Query:
         :param expr: 'Name', 'UnaryOp', 'Compare', 'BoolOp'
         :return: filter
         """
-        assert not check_type(expr, 'Assign'), f"{self.get_error_comment(expr)} '=' should be '=='"
-        assert check_type(expr, 'Expr'), f"{self.get_error_comment(expr)} only 'expression' allow."
+        assert not check_ast_type(expr, 'Assign'), f"{self.get_error_comment(expr)} '=' should be '=='"
+        assert check_ast_type(expr, 'Expr'), f"{self.get_error_comment(expr)} only 'expression' allow."
         db_filter = filter()
 
-        # exist calls 'is_not_empty'
+        # 'Name' which only exists calls 'is_not_empty'
         element: T_Node = expr.value
-        if check_type(element, 'Name'):
+        if check_ast_type(element, 'Name'):
             ast_name: _ast.Name = expr.value  # type: ignore
             filter_ins = self.is_not_empty(ast_name)
             db_filter.add(filter_ins)
 
         # 'not' keyword calls 'is_empty'
-        elif check_type(element, 'UnaryOp'):
+        elif check_ast_type(element, 'UnaryOp'):
             db_filter.add(self.parse_unaryop(element))  # type: ignore
 
         # compare
-        elif check_type(element, 'Compare'):
+        elif check_ast_type(element, 'Compare'):
             filter_ins = self.parse_compare(element)  # type: ignore
             db_filter.add(filter_ins)
 
         # BoolOp composition
-        elif check_type(element, 'BoolOp'):
+        elif check_ast_type(element, 'BoolOp'):
             bool_op = 'or'
-            if check_type(element.op, 'And'):  # type: ignore
+            if check_ast_type(element.op, 'And'):  # type: ignore
                 bool_op = 'and'
 
             db_filter.bool_op = bool_op
@@ -1098,10 +1233,7 @@ class Query:
         return prop_obj, filter_cls(prop_name)  # type: ignore
 
     def is_not_empty(self, expr: _ast.Name) -> FilterConditionEmpty:
-        prop_obj: properties_basic.DbPropertyObject
-        filter_ins: FilterConditionABC
         prop_obj, filter_ins = self.get_property_and_filter(expr)
-
         assert hasattr(filter_ins, 'is_not_empty')
         filter_ins.is_not_empty()  # type: ignore
         return filter_ins  # type: ignore
@@ -1127,7 +1259,7 @@ class Query:
         self._error_with_expr = f"'{expression}' is invalid expression."
 
         result: filter = self.parse_module(expression)  # type: ignore
-        log.info(f"{expression}: {result._body}")
+        log.info(f"{expression}: {result.get_body()}")
         # assert result._body['or'], f"{result._body['or']}"
         return result
 
