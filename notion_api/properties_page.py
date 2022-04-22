@@ -2,9 +2,11 @@ from notion_api.functions import from_rich_text_array_to_plain_text
 from notion_api.functions import parse_date_object
 from notion_api.object_adt import MutableProperty
 from notion_api.properties_basic import PagePropertyObject
+from notion_api.object_basic import UserObject
+from typing import Any, Dict, List
 
 
-def parse_value_object(obj):
+def parse_value_object(obj: Any) -> Any:
     """
     parse value of 'formula' and 'rollup'. 
 
@@ -58,7 +60,7 @@ class PagePropertyRollup(PagePropertyObject):
     """
     _type_defined = 'rollup'
 
-    def get_value(self):
+    def get_value(self) -> Any:
         """
         parse 'rollup object'
         """
@@ -70,6 +72,23 @@ class PagePropertyPeople(PagePropertyObject):
     'PagePropertyPeople'
     """
     _type_defined = 'people'
+
+    def __init__(self, parent: Any, data: Dict[str, Any], parent_type: str, name: str, force_new: bool = False):
+        """
+
+        :param parent: PropertiesProperty
+        :param data:
+        :param parent_type:
+        :param name:
+        :param force_new:
+        """
+
+        user_list: List[UserObject] = list()
+        object_list: List[Dict[str, Any]] = data['people']
+        for e in object_list:
+            user_list.append(UserObject(e))
+        data['people'] = user_list
+        super().__init__(parent, data, parent_type, name)
 
 
 class PagePropertyMultiSelect(PagePropertyObject):
@@ -116,7 +135,7 @@ class PagePropertyRichText(PagePropertyObject):
     """
     _type_defined = 'rich_text'
 
-    def get_value(self):
+    def get_value(self) -> Any:
         """
         parse 'rich_text' to plain 'string' and return
         """
@@ -144,7 +163,7 @@ class PagePropertyFormula(PagePropertyObject):
     """
     _type_defined = 'formula'
 
-    def get_value(self):
+    def get_value(self) -> Any:
         """
         parse 'formula object'
         """
@@ -164,7 +183,7 @@ class PagePropertyDate(PagePropertyObject):
     """
     _type_defined = 'date'
 
-    def get_value(self):
+    def get_value(self) -> Any:
         """
         parse 'date object'
         """
@@ -184,7 +203,7 @@ class PagePropertyTitle(PagePropertyObject):
     """
     _type_defined = 'title'
 
-    def get_value(self):
+    def get_value(self) -> Any:
         """
         parse 'rich_text' to plain 'string' and return
         """

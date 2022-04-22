@@ -21,6 +21,7 @@ from typing import Type
 from notion_api.http_request import HttpRequest
 
 from notion_api.object_basic import NotionObject
+from notion_api.object_basic import UserObject
 from notion_api.object_basic import ObjectProperty
 from notion_api.properties_basic import PropertyObject
 from notion_api.properties_property import PropertiesProperty
@@ -39,16 +40,22 @@ from typing import Dict
 from typing import List
 from typing import Union
 
+from types import SimpleNamespace
+
 _log = __import__('logging').getLogger(__name__)
 
 
 class NotionBasicObject(NotionObject):
     """
-    '_NotionBasicObject' for Database, Page and Block.
+    '_NotionBasicObject' with '_update' method which update information and refresh itself.
     """
     _instances: Dict[str, Any] = {}
 
-    def __new__(cls, request, data, instance_id: str = None):
+    _api_url: str
+    id: ImmutableProperty
+
+    def __new__(cls, request: HttpRequest, data: Dict[str, Any], instance_id: Optional[str] = None) \
+            -> 'NotionBasicObject':
         """
         construct '_NotionBasicObject' class.
 
@@ -57,33 +64,37 @@ class NotionBasicObject(NotionObject):
         :param data:
         :param instance_id:
         """
-        _log.debug(" ".join(map(str, ('_NotionBasicObject:', cls))))
-        instance = super(NotionBasicObject, cls).__new__(cls, data)
 
+        _log.debug(" ".join(map(str, ('NotionBasicObject:', cls))))
+        instance: 'NotionBasicObject' = super(NotionBasicObject, cls).__new__(cls, data)  # type: ignore
+
+        # assign 'new namespace' with 'unassigned descriptors'.
         if instance_id:
-            org_namespace = dict(NotionBasicObject._instances[instance_id].__dict__)
-
             NotionBasicObject._instances[instance_id].__dict__ = instance.__dict__
-            for k in set(org_namespace) - set(instance.__dict__):
-                instance.__dict__[k] = org_namespace[k]
-
         else:
-            instance_id = data['id']
-
+            instance_id = str(data['id'])
             NotionBasicObject._instances[instance_id] = instance
 
         return instance
 
-    def __init__(self, request, data):
-        _log.debug(" ".join(map(str, ('_NotionBasicObject:', self))))
+    def __init__(self, request: HttpRequest, data: Dict[str, Any], instance_id: Optional[str] = None):
+        """
+
+        :param request:
+        :param data:
+        :param instance_id:
+        """
+        _log.debug(" ".join(map(str, ('NotionBasicObject:', self))))
+        self._request: HttpRequest = request
         super().__init__(data)
 
-    def _update(self, property_name, contents):
-        url = self._api_url + self.id
+    def _update(self, property_name: str, contents: Dict[str, Any]) -> None:
+        url = self._api_url + str(self.id)
         request, data = self._request.patch(url, {property_name: contents})
         # update property of object using 'id' value.
-        cls: type(NotionBasicObject) = type(self)
-        cls(request, data, instance_id=data['id'])
+        cls: type(NotionBasicObject) = type(self)  # type: ignore
+        # update instance
+        cls(request, data, instance_id=str(data['id']))
 
 
 class QueriedPageIterator:
@@ -146,21 +157,74 @@ class QueriedPageIterator:
                 raise StopIteration
 
 
+"""
+Where user objects appear in the API
+User objects appear in the API in nearly all objects returned by the API, including:
+
+[v] 'Database' object under 'created_by' and 'last_edited_by'.
+[ ] 'Page' object under created_by and last_edited_by and in people property items.
+[ ] 'Block' object under created_by and last_edited_by.
+[ ] 'Rich text' object, as user mentions.
+[ ] 'Property' object when the property is a people property.
+"""
+
+
+class User(NotionBasicObject, UserObject):
+    """
+    User Object
+    """
+    _api_url = 'v1/users/'
+
+    @notion_object_init_handler
+    def __init__(self, request: HttpRequest, data: Dict[str, Any]):
+        """
+
+        :param request:
+        :param data:
+        """
+        self._update_event_status = False
+        super().__init__(request, data)
+
+    def update_info(self) -> None:
+        """
+        get all information of user. If already updated, stop and doesn't make request event.
+        :return: None
+        """
+        if self._update_event_status:
+            return
+
+        url = self._api_url + str(self.id)
+        request, data = self._request.get(url)
+        _log.debug(f"{type(self).__init__}")
+        type(self)(request, data, instance_id=data['id'])
+
+
+class UserProperty(ImmutableProperty):
+    """
+    User Property for Database, Page: 'created_by' and 'last_edited_by'
+    """
+
+    def __set__(self, owner: NotionBasicObject, value: Dict[str, Any]) -> None:
+        obj = User(owner._request, value)
+        super().__set__(owner, obj)
+
+
 class Database(NotionBasicObject):
 
     _api_url = 'v1/databases/'
 
     id = ImmutableProperty()
     created_time = ImmutableProperty()
-    # created_by = User()
+    created_by = UserProperty()
+    last_edited_by = UserProperty()
     title = TitleProperty()
     icon = MutableProperty()
     cover = MutableProperty()
 
-    properties = PropertiesProperty(object_type='database')
+    properties: PropertiesProperty = PropertiesProperty(object_type='database')
 
-    @notion_object_init_handler  # type: ignore
-    def __init__(self, request: HttpRequest, data):
+    @notion_object_init_handler
+    def __init__(self, request: HttpRequest, data: Dict[str, Any]):
         """
         initilize Database instance.
 
@@ -171,19 +235,20 @@ class Database(NotionBasicObject):
 
         object_type = data['object']
         assert object_type == 'database', f"data type is not 'database'. (type: {object_type})"
-        self._request: HttpRequest = request
 
         _log.debug(" ".join(map(str, ('Database:', self))))
         super().__init__(request, data)
 
         self._query_helper = Query(self.properties)
 
-    def _update(self, property_name, contents):
-        url = self._api_url + self.id
-        request, data = self._request.patch(url, {property_name: contents})
-        # update property of object using 'id' value.
-        _log.debug(f"{type(self).__init__}")
-        type(self)(request, data, instance_id=data['id'])
+    def __str__(self) -> str:
+        title = ''
+        try:
+            title = ": " + str(self.title)
+        except:
+            pass
+        str_content = f"<'{self.__class__.__name__}{title}'>"
+        return str_content
 
     def query(self, query_expression: str) -> QueriedPageIterator:
         """
@@ -281,7 +346,6 @@ class Database(NotionBasicObject):
             keys = tuple(columns_select)
         else:
             keys = (*self.properties.keys(),)
-
         for page in queried_page_iterator:
             values = page.get_properties()
             result.append({k: values[k] for k in keys})
@@ -324,11 +388,14 @@ class Page(NotionBasicObject):
     Page Object
     """
     properties = PropertiesProperty(object_type='page')
+    id = ImmutableProperty()
+    created_by = UserProperty()
+    last_edited_by = UserProperty()
 
     _api_url = 'v1/pages/'
 
     @notion_object_init_handler
-    def __init__(self, request, data):
+    def __init__(self, request: HttpRequest, data: Dict[str, Any]):
 
         """
 
@@ -336,42 +403,23 @@ class Page(NotionBasicObject):
             request: Notion._request
             data: returned from ._request
         """
-        self._request = request
+
         object_type = data['object']
         assert object_type == 'page', f"data type is not 'database'. (type: {object_type})"
         super().__init__(request, data)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<Page at '{self.id}'>"
 
-    def get_properties(self) -> dict:
+    def get_properties(self) -> Dict[str, Any]:
         """
         return value of properties simply
         :return: {'key' : value, ...}
         """
         result = dict()
-        for k, v in self.properties.items():
-            v: PagePropertyObject
+        for k, v in self.properties.items():  # type: ignore
             result[k] = v.get_value()
 
         return result
 
 
-PropertiesProperty
-
-
-class User(NotionObject):
-    """
-    User Object
-    """
-    object = ImmutableProperty()
-    id = ImmutableProperty()
-
-
-
-    def __set__(self, owner: Any, value: Dict[str, Any]) -> None:
-
-        self.__set_name__(owner, 'user')
-
-        if not self._check_assigned(owner):
-            setattr(owner, self.private_name, dict())

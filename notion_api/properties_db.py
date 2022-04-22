@@ -1,5 +1,7 @@
 from notion_api.properties_basic import DbPropertyObject
 from notion_api.functions import from_plain_text_to_rich_text_array
+from typing import Any
+from typing import Dict
 
 class DbPropertyLastEditedTime(DbPropertyObject):
     """
@@ -146,7 +148,7 @@ class DbPropertyText(DbPropertyObject):
     _mutable = True
     _input_validation = (str, list)
 
-    def _convert_to_update(self, value: str):
+    def _convert_to_update(self, value: Any) -> Any:
         """
         convert value to 'text' update from.
 
@@ -167,7 +169,7 @@ class DbPropertyTitle(DbPropertyObject):
     _mutable = True
     _input_validation = (str, list)
 
-    def _convert_to_update(self, value: str):
+    def _convert_to_update(self, value: str) -> Dict[str, Any]:
         """
         convert value to 'title' update from.
 

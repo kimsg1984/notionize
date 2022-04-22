@@ -11,6 +11,8 @@ logging.basicConfig(format=log_format, level=logging.INFO)
 import notion_api.notion
 from notion_api.objects import Database
 from notion_api.objects import Page
+from notion_api.objects import UserObject
+from notion_api.objects import User
 from notion_api.functions import pdir
 from query import sorts
 from query import sort_by_timestamp
@@ -174,7 +176,52 @@ class Test_PropertyObject(TestCase):
 
 
 class TestUser(TestCase):
-    def test_user(self) -> None:
-        test_table = notion.get_database('f7001a895f39403eae3d90b6451639f4')  # Tast Case Table2 : Simple Test
-        print(test_table.last_edited_by.keys())
-        print(test_table.last_edited_by['object'])
+    def dtest_user(self) -> None:
+        test_table = notion.get_database('44d6b8fda2734f04968a771a79f97fb6')  # Tast Case Table1 : Full Test
+        user = notion.get_user('1ecee6f3-2456-4778-8fca-f9c77f34f2b9')
+        print(user)
+        print(repr(user))
+        print(repr(test_table))
+
+    def dtest_user(self) -> None:
+        test_table = notion.get_database('44d6b8fda2734f04968a771a79f97fb6')  # Tast Case Table1 : Full Test
+        user_list = notion.get_all_users()
+        print(user_list)
+
+    def dtest_bots(self) -> None:
+        user_list = notion.get_me()
+        print(user_list)
+
+    def dtest_database(self):
+        me = notion.get_me()
+        print('me: ', me)
+        print('me: ', repr(me))
+
+        # user_obj = UserObject({'object': 'user', 'id': '1ecee6f3-2456-4778-8fca-f9c77f34f2b9'})
+
+        # print(user_obj)
+        test_table = notion.get_database('44d6b8fda2734f04968a771a79f97fb6')  # Tast Case Table1 : Full Test
+        print(pdir(test_table))
+        print(test_table.created_by)
+        print(test_table.last_edited_by)
+
+    def dtest_update_info(self):
+        test_table = notion.get_database('44d6b8fda2734f04968a771a79f97fb6')  # Tast Case Table1 : Full Test
+        # print(test_table.title)
+        # test_table.title = '테스트 케이스 테이블'
+        # print(test_table.title)
+        user = test_table.created_by
+        print(user, pdir(user))
+        user.update_info()
+        print(user, pdir(user))
+
+    def dtest_page(self):
+        test_page = notion.get_page('e8d28d7c0056414582fe23f2ab7c3928')
+        print(test_page.created_by)
+        print(test_page.last_edited_by)
+        people = test_page.properties['User']
+        print(people, people.type, people.people,  pdir(people), sep=', ')
+        print()
+
+        print(repr(people.people[0]))
+

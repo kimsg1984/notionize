@@ -1,4 +1,4 @@
-from typing import MutableMapping, MutableSequence
+from typing import MutableMapping, MutableSequence, List
 from typing import Optional
 from typing import Dict
 from typing import Any
@@ -45,18 +45,17 @@ def get_proper_object(key: str, value: object, parent: object) -> object:
         return value
 
 
-class DictionaryObject(MutableMapping):
-
+class DictionaryObject(MutableMapping[str, Any]):
     """
-    '_DictionaryObject Descriptor' which used for 'Key-Value' pettern. Imutable is 'default'.
+    'DictionaryObject Descriptor' which used for 'Key-Value' object. Immutable is 'default'.
     """
 
-    def __init__(self, name, owner: 'NotionObject'=None, data: Optional[Dict[str, Any]]=None, mutable=False):
+    def __init__(self, name: str, owner: Any = None, data: Optional[Dict[str, Any]] = None, mutable: bool = False):
         """
         Initilize '_DictionaryObject'.
 
         :param name: str (property name)
-        :param owner: object (other name is parent)
+        :param owner: NotionObject (other name is parent)
         :param data: if it assigned, object doesn't need 'additianl assigning event'.
         :param mutable: bool (default: False)
         """
@@ -66,18 +65,37 @@ class DictionaryObject(MutableMapping):
 
         # descriptor already has '_data' property.
         if not issubclass(type(self), ImmutableProperty):
-            self._data = dict()
+            self._data: Dict[str, Any] = dict()
 
         if data:
             self.__set__(owner, data)
 
-    def __str__(self):
-        return f"<'{self.__class__.__name__}'>"
+    def _get_keys(self, long=False) -> str:
+        try:
+            element_list = list()
 
-    def __repr__(self):
-        return f"<'{self.__class__.__name__}(dict_type{'-mutable' if self._mutable else ''})' at {hex(id(self))}>"
+            for e in self._data:
+                if isinstance(e, (DictionaryObject, ListObject)):
+                    element_list.append(f"'{e.__class__.__name__}'")
+                else:
+                    element_list.append(f"'{e}'")
+            if 3 < len(element_list) and (not long):
+                element_list = element_list[:3]
+                element_list.append('...')
+            keys = ", ".join(element_list)
+            return f"(keys: {keys})"
 
-    def __set__(self, owner, value: dict):
+        except AttributeError:
+            return ''
+
+    def __str__(self) -> str:
+        return f"<'{self.__class__.__name__}{self._get_keys()}'>"
+
+    def __repr__(self) -> str:
+        return f"<'{self.__class__.__name__}{'(mutable)' if self._mutable else ''}{self._get_keys(long=True)}' " \
+               f"at {hex(id(self))}>"
+
+    def __set__(self, owner: Any, value: Dict[str, Any]) -> None:
         """
         Allow only first event.
 
@@ -86,7 +104,6 @@ class DictionaryObject(MutableMapping):
         :return:
         """
         # _log.debug(f"owner, self.name, {owner}, {self.name}")
-
 
         if not self._data:
 
@@ -136,7 +153,7 @@ class DictionaryObject(MutableMapping):
         return self._data.keys()
 
 
-class ListObject(MutableSequence):
+class ListObject(MutableSequence[Any]):
 
     def __init__(self, name, owner, data: list=None, mutable=False):
 
@@ -147,8 +164,30 @@ class ListObject(MutableSequence):
         if data:
             self.__set__(owner, data)
 
-    def __repr__(self):
-        return f"<'{self.__class__.__name__}(list_type{'-mutable' if self._mutable else ''})' at {hex(id(self))}>"
+    def _get_list(self, long=False) -> str:
+        try:
+            element_list: List[str] = list()
+            for e in self._data:
+                if isinstance(e, (DictionaryObject, ListObject)):
+                    element_list.append(f"'{e.__class__.__name__}'")
+                else:
+                    element_list.append(f"'{e}'")
+
+            if 3 < len(element_list) and (not long):
+                element_list = element_list[:3]
+                element_list.append('...')
+            keys = ", ".join(element_list)
+            return f"[{keys}]"
+
+        except AttributeError:
+            return ''
+
+    def __str__(self) -> str:
+        return f"<'{self.__class__.__name__}{self._get_list()}'>"
+
+    def __repr__(self) -> str:
+        return f"<'{self.__class__.__name__}{'(mutable)' if self._mutable else ''}{self._get_list(long=True)}' " \
+               f"at {hex(id(self))}>"
 
     def __get__(self, obj, objtype=None):
         return self

@@ -1,4 +1,4 @@
-from functools import wraps as _wraps
+from functools import wraps
 from typing import List
 from typing import Any
 from typing import Dict
@@ -37,20 +37,22 @@ def from_plain_text_to_rich_text_array(string: str) -> List[Dict[str, Any]]:
     return [{"text": {"content": string}}]
 
 
-def notion_object_init_handler(init_function: Callable[[Any], None]) -> object:
+def notion_object_init_handler(init_function: Callable[..., None]) -> Callable[..., None]:
     """
-    All notion object having '_update' method should be wrapped by 'this decorator'.
-    If '__init__' method is called with  'key' keyword argument, wrapper will not execute it
-    because '__new__' method executes with '__init__' to handle namespace.
+    All 'notion object' with '_update' method should be wrapped by 'notion_object_init_handler' decorator.
+    When '__init__' method is called with  'instance_id' keyword argument, wrapper will remove and execute it.
 
     :param init_function: function
-    :return:
+    :return: function
     """
 
-    @_wraps(init_function)
-    def wrapper_function(*args: List[Any], **kwargs: Dict[str, Any]) -> object:  # type: ignore
-        if 'instance_id' not in kwargs:
-            return init_function(*args, **kwargs)
+    @wraps(init_function)
+    def wrapper_function(*args: List[Any], **kwargs: Dict[str, Any]) -> None:
+        if 'instance_id' in kwargs:
+            del kwargs['instance_id']
+            init_function(*args, **kwargs)
+        else:
+            init_function(*args, **kwargs)
 
     return wrapper_function
 

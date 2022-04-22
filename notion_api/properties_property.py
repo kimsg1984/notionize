@@ -6,12 +6,20 @@ import notion_api.properties_page
 import notion_api.properties_db
 from typing import Any
 from typing import Dict
+from typing import Optional
 
 
 class PropertiesProperty(DictionaryObject, ImmutableProperty):
     """
     'PropertiesProperty' for 'Database' and 'Page'. Mutable Type
     """
+
+    """
+    '_parent' property is assigned with every '__get__' and '__set__' method call event for pointing to
+    proper '_data' object.
+    """
+    _parent: Any
+
     def __new__(cls, object_type: str) -> 'PropertiesProperty':
 
         super_cls = super(PropertiesProperty, cls)
@@ -30,21 +38,27 @@ class PropertiesProperty(DictionaryObject, ImmutableProperty):
         super().__init__('properties')
 
     @property
-    def _data(self):
+    def _data(self) -> Dict[str, Any]:
         """
         override '_data' property to be a descriptor.
-        :return:
+        :return: DictionaryObject
         """
-        return getattr(self._parent, self.private_name)
+        data: Dict[str, Any] = getattr(self._parent, self.private_name)
+        return data
 
-    def __set__(self, owner, value: dict):
+    def __get__(self, owner: object, object_type: Optional[object] = None) -> 'PropertiesProperty':
+        """
+        before call '__set_item__' or '__get_item__' method, install call itself by '__get__' method.
+        """
+        self._parent = owner
+        return self
+
+    def __set__(self, owner, value: DictionaryObject):
 
         self.__set_name__(owner, self.name)
 
         if not self._check_assigned(owner):
             setattr(owner, self.private_name, dict())
-
-        _log.debug(f'{self}, {owner}')
         mutable_status = self._mutable
         self._parent = owner
         self._mutable = True
@@ -83,7 +97,7 @@ class PropertiesProperty(DictionaryObject, ImmutableProperty):
         :return:
         """
         _log.debug(f"self._parent: {self._parent}")
-        self._parent._update('properties', {property_name:data})
+        self._parent._update('properties', {property_name: data})
 
 
 database_properties_mapper = dict()

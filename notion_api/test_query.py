@@ -1,11 +1,13 @@
 import logging
 
-# log_format = '%(asctime)s [%(filename)s:%(lineno)s|%(levelname)s] %(funcName)s(): %(message)s'
 
-# logging.basicConfig(format=log_format, level=logging.DEBUG)
-log_format = '%(lineno)s|%(levelname)s] %(funcName)s(): %(message)s'
+
+# log_format = '%(lineno)s|%(levelname)s] %(funcName)s(): %(message)s'
+log_format = '%(asctime)s [%(filename)s:%(lineno)s|%(levelname)s] %(funcName)s(): %(message)s'
+
 # logging.basicConfig(format=log_format, level=logging.ERROR)
-logging.basicConfig(format=log_format, level=logging.INFO)
+# logging.basicConfig(format=log_format, level=logging.INFO)
+logging.basicConfig(format=log_format, level=logging.DEBUG)
 # logging.basicConfig(format=log_format, level=logging.WARN)
 
 log = logging.getLogger(__name__)
@@ -297,3 +299,8 @@ class Query_test(TestCase):
                 # log.info('[Error]' + str(e))
                 log.info(traceback.format_exc())
 
+    def test_people(self):
+        # query_test('people')
+        test_table = notion.get_database('44d6b8fda2734f04968a771a79f97fb6')  # Tast Case Table1 : Full Test
+        log.debug('call number property')
+        test_table.properties['Number']

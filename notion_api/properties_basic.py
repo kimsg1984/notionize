@@ -3,6 +3,10 @@ from notion_api.functions import from_rich_text_array_to_plain_text, from_plain_
 from notion_api.object_adt import MutableProperty, ListObject
 from notion_api.object_basic import NotionObject
 
+from typing import Dict
+from typing import Tuple
+from typing import Any
+from typing import Callable
 _log = __import__('logging').getLogger(__name__)
 
 
@@ -21,7 +25,6 @@ class TitleProperty(MutableProperty):
     """
 
     def __get__(self, obj, objtype=None):
-        _log.debug(f"{self}, {obj}")
         return from_rich_text_array_to_plain_text(getattr(obj, self.private_name))
 
     def __set__(self, obj, value):
@@ -38,19 +41,27 @@ class PropertyObject(NotionObject):
     # to find which object is proper, uses '_type_defined' while assigning event.
     _type_defined = ''
 
-    def __new__(cls, obj, data, parent_type, name: str, force_new=False):
+    def __new__(cls, parent: Any, data: Dict[str, Any], parent_type: str, name: str, force_new: bool = False) \
+            -> 'PropertyObject':
         new_cls = super(PropertyObject, cls)
-        ins = new_cls.__new__(cls, data, force_new=force_new)
-
+        ins = new_cls.__new__(cls, data, force_new=force_new)  # type: ignore
         return ins
 
-    def __init__(self, parent: 'PropertiesProperty', data, parent_type, name: str, force_new=False):  # type: ignore
+    def __init__(self, parent: Any, data: Dict[str, Any], parent_type: str, name: str, force_new: bool = False):
+        """
+
+        :param parent: PropertiesProperty
+        :param data:
+        :param parent_type:
+        :param name:
+        :param force_new:
+        """
         self._parent: 'PropertiesProperty' = parent  # type: ignore
         self._parent_type = parent_type
 
         # page properties don't have 'name' property. This method assign '_name' property manually.
         self._name = name
-        super().__init__(data)  # type: ignore
+        super().__init__(data)
 
 
 class PagePropertyObject(PropertyObject):
@@ -61,11 +72,10 @@ class PagePropertyObject(PropertyObject):
     # to figure out which object is 'proper', uses '_type_defined' while assigning event.
     _type_defined = ''
 
-    def __repr__(self):
-        # return f"<'{self.__class__.__name__}:' at {hex(id(self))}>"
+    def __repr__(self) -> str:
         return f"<'{self.__class__.__name__}: {self._name}' at {hex(id(self))}>"
 
-    def _update(self, property_name, data):
+    def _update(self, property_name: str, data: Dict[str, Any]) -> None:
         self._parent._update(self.name, {property_name: data})
 
     def get_value(self):
@@ -95,16 +105,16 @@ class DbPropertyObject(PropertyObject):
 
     name = MutableProperty()
     type = MutableProperty()
-    _input_validation = tuple()
+    _input_validation: Tuple[Callable[[Any], Any], ...] = tuple()
 
-    def _update(self, property_name, data):
+    def _update(self, property_name: str, data: Dict[str, Any]) -> None:
         if property_name == 'type':
             property_type = data
             self._parent._update(self.name, {property_name: property_type, property_type: {}})
         else:
             self._parent._update(self.name, {property_name: data})
 
-    def _convert_to_update(self, value: any):
+    def _convert_to_update(self, value: Any) -> Dict[str, Any]:
         """
         convert value to update object form.
 
@@ -118,5 +128,5 @@ class DbPropertyObject(PropertyObject):
         """
         return {self._type_defined: value}
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<'{self.__class__.__name__}: {self.name}' at {hex(id(self))}>"
