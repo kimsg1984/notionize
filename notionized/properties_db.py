@@ -1,7 +1,10 @@
-from notion_api.properties_basic import DbPropertyObject
-from notion_api.functions import from_plain_text_to_rich_text_array
+from notionized.properties_basic import DbPropertyObject
+from notionized.properties_basic import TitleProperty
+from notionized.object_adt import DictionaryObject
+from notionized.functions import from_plain_text_to_rich_text_array
 from typing import Any
 from typing import Dict
+
 
 class DbPropertyLastEditedTime(DbPropertyObject):
     """
@@ -67,6 +70,7 @@ class DbPropertyRelation(DbPropertyObject):
     """
     _type_defined = 'relation'
     _mutable = False
+    relation: DictionaryObject
 
 
 class DbPropertyFormula(DbPropertyObject):
@@ -168,6 +172,7 @@ class DbPropertyTitle(DbPropertyObject):
     _type_defined = 'title'
     _mutable = True
     _input_validation = (str, list)
+    title = TitleProperty()
 
     def _convert_to_update(self, value: str) -> Dict[str, Any]:
         """

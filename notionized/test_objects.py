@@ -8,19 +8,19 @@ log_format = '%(asctime)s [%(filename)s:%(lineno)s|%(levelname)s] %(funcName)s()
 # logging.basicConfig(format=log_format, level=logging.DEBUG)
 logging.basicConfig(format=log_format, level=logging.INFO)
 
-import notion_api.notion
-from notion_api.objects import Database
-from notion_api.objects import Page
-from notion_api.objects import UserObject
-from notion_api.objects import User
-from notion_api.functions import pdir
+import notionized.notion
+from notionized.objects import Database
+from notionized.objects import Page
+from notionized.objects import UserObject
+from notionized.objects import User
+from notionized.functions import pdir
 from query import sorts
 from query import sort_by_timestamp
 
-notion = notion_api.notion.Notion('secret_rvDkx9qH8AVG3aKBVwZ4r5Byo75uoAPMrQ1I6bo4d6G')
+notion = notionized.notion.Notion('secret_rvDkx9qH8AVG3aKBVwZ4r5Byo75uoAPMrQ1I6bo4d6G')
 
 
-# log = notion_api.notion._log
+# log = notionized.notion._log
 # # log.setLevel(logging.DEBUG)
 # log.debug('test')
 
@@ -39,9 +39,9 @@ def pdir(obj, level='public'):
 class TestDatabase(TestCase):
 
     def test_filter(self):
-        import notion_api.notion
+        import notionized.notion
 
-        notion = notion_api.notion.Notion('secret_rvDkx9qH8AVG3aKBVwZ4r5Byo75uoAPMrQ1I6bo4d6G')
+        notion = notionized.notion.Notion('secret_rvDkx9qH8AVG3aKBVwZ4r5Byo75uoAPMrQ1I6bo4d6G')
         filter_table = notion.get_database('e8108c53c9cf42259878954a289842fe')
         result = [*filter_table._filter_and_sort()]
         print(*result, sep="\n")
@@ -49,8 +49,8 @@ class TestDatabase(TestCase):
 
 class TestPage(TestCase):
     def test_get_properties(self):
-        import notion_api.notion
-        notion = notion_api.notion.Notion('secret_rvDkx9qH8AVG3aKBVwZ4r5Byo75uoAPMrQ1I6bo4d6G')
+        import notionized.notion
+        notion = notionized.notion.Notion('secret_rvDkx9qH8AVG3aKBVwZ4r5Byo75uoAPMrQ1I6bo4d6G')
 
         # filter_table = notion.get_database('e8108c53c9cf42259878954a289842fe')
         test_page = notion.get_page('e8d28d7c0056414582fe23f2ab7c3928')
@@ -65,8 +65,8 @@ class TestDatabase(TestCase):
 
         :return:
         """
-        import notion_api.notion
-        notion = notion_api.notion.Notion('secret_rvDkx9qH8AVG3aKBVwZ4r5Byo75uoAPMrQ1I6bo4d6G')
+        import notionized.notion
+        notion = notionized.notion.Notion('secret_rvDkx9qH8AVG3aKBVwZ4r5Byo75uoAPMrQ1I6bo4d6G')
         property_table = notion.get_database('d3bf7c7d8c714f13b31638bfbcd13b36')
         d3 = notion.get_database('44d6b8fda2734f04968a771a79f97fb6')  # test1
 
@@ -115,11 +115,11 @@ class TestDatabase(TestCase):
         # # print(*props_dict, sep="\n")
 
     def test_get_databae(self):
-        import notion_api.notion
+        import notionized.notion
         from pprint import pprint
-        from notion_api.query import filter
+        from notionized.query import filter
         import time
-        notion = notion_api.notion.Notion('secret_rvDkx9qH8AVG3aKBVwZ4r5Byo75uoAPMrQ1I6bo4d6G')
+        notion = notionized.notion.Notion('secret_rvDkx9qH8AVG3aKBVwZ4r5Byo75uoAPMrQ1I6bo4d6G')
         d3 = notion.get_database('44d6b8fda2734f04968a771a79f97fb6')  # test1
 
         # print(d3, pdir(d3))
@@ -159,8 +159,8 @@ class TestDatabase(TestCase):
 
 class Test_PropertyObject(TestCase):
     def test_properties(self):
-        import notion_api.notion
-        notion = notion_api.notion.Notion('secret_rvDkx9qH8AVG3aKBVwZ4r5Byo75uoAPMrQ1I6bo4d6G')
+        import notionized.notion
+        notion = notionized.notion.Notion('secret_rvDkx9qH8AVG3aKBVwZ4r5Byo75uoAPMrQ1I6bo4d6G')
 
         # filter_table = notion.get_database('e8108c53c9cf42259878954a289842fe')
         test_page = notion.get_page('e8d28d7c0056414582fe23f2ab7c3928')

@@ -6,8 +6,8 @@ import logging
 log_format = '%(asctime)s [%(filename)s:%(lineno)s|%(levelname)s] %(funcName)s(): %(message)s'
 
 # logging.basicConfig(format=log_format, level=logging.ERROR)
-# logging.basicConfig(format=log_format, level=logging.INFO)
-logging.basicConfig(format=log_format, level=logging.DEBUG)
+logging.basicConfig(format=log_format, level=logging.INFO)
+# logging.basicConfig(format=log_format, level=logging.DEBUG)
 # logging.basicConfig(format=log_format, level=logging.WARN)
 
 log = logging.getLogger(__name__)
@@ -19,15 +19,16 @@ import query
 from query import filter
 # from query import query_by_expression
 from query import filter_text
-import notion_api.notion
+from query import filter_rollup
+import notionized.notion
 import pandas as pd
 from pprint import pprint
 
 from typing import List
 from typing import Dict
+from functions import pdir
 
-
-notion = notion_api.notion.Notion('secret_rvDkx9qH8AVG3aKBVwZ4r5Byo75uoAPMrQ1I6bo4d6G')
+notion = notionized.notion.Notion('secret_rvDkx9qH8AVG3aKBVwZ4r5Byo75uoAPMrQ1I6bo4d6G')
 test_table = notion.get_database('44d6b8fda2734f04968a771a79f97fb6')
 
 datetime_case = ['2022-03-23', '2022-03-24', '2022-03-25', '2022-03-26',
@@ -42,7 +43,7 @@ testcase_sample = {
     'boolean': [True, False],
     'string(enum)': '',
     'object(number filter condition)': '',
-    'string(UUIDv4)': '',
+    'string(UUIDv4)': [],
     'object(date filtercondition)': '',
     'object(checkbox filter condition)': '',
     'object(text filter condition)': '',
@@ -53,6 +54,7 @@ testcase_sample = {
     'object (checkbox filter condition)': [True, False],
     'object (date filter condition)': datetime_case,
     'object (text filter condition)': ['string', ],
+    'string (UUIDv4)': ['1ecee6f3-2456-4778-8fca-f9c77f34f2b9', '10f8df851f894e6089f6889638f2f0a3'],
 }
 
 
@@ -69,7 +71,7 @@ def query_test(test_type: str, test_all=False) -> None:
          'number', 'relation', 'last_edited_by', 'checkbox', 'formula', 'created_time', 'phone_number', 'files',
          'rollup', 'title']
     """
-    print('test_properties', test_properties.keys())
+    # print('test_properties', test_properties.keys())
     # print(*[f"{r['object_type']}: {r['property_name']}" for r in result], sep='\n')
 
 
@@ -122,6 +124,7 @@ def test_formula(r, formula_type, test_type):
             for r in result:
                 print('     value:', test_value, f'{test_column}:', r[test_column])
 
+
 def test_each_row(r, test_properties, result, formula=False):
     done = r['메소드']
     property_name = r['property_name']
@@ -168,9 +171,11 @@ def test_each_row(r, test_properties, result, formula=False):
                 method(test_value)
             db_filter = filter()
             db_filter.add(condition)
+            print(db_filter.get_body())
             result = test_table.get_as_dictionaries(test_table._filter_and_sort(notion_filter=db_filter))
             for r in result:
                 print('     value:', test_value, f'{test_column}:', r[test_column])
+
 
 class Testfilter_text(TestCase):
     def dtest_property(self) -> None:
@@ -299,8 +304,65 @@ class Query_test(TestCase):
                 # log.info('[Error]' + str(e))
                 log.info(traceback.format_exc())
 
-    def test_people(self):
-        # query_test('people')
-        test_table = notion.get_database('44d6b8fda2734f04968a771a79f97fb6')  # Tast Case Table1 : Full Test
-        log.debug('call number property')
-        test_table.properties['Number']
+    def dtest_people(self):
+        query_test('people')
+
+    def dtest_relation(self):
+        query_test('relation')
+
+    def dtest_rollup_simple(self):
+
+        db_filter = filter()
+        condition_text = filter_text(filter_text.TYPE_RICHTEXT, 'Rollup_text')
+        condition_text.contains('text')
+        condition_rollup = filter_rollup('Rollup_text')
+        condition_rollup.any(condition_text)
+        db_filter.add(condition_rollup)
+
+        print(db_filter.get_body())
+        result = test_table.get_as_dictionaries(test_table._filter_and_sort(notion_filter=db_filter))
+        print(result)
+
+    def dtest_rollup_relation(self):
+
+        table = notion.get_database('c0dbfa46ba0046d294f087f4a1c5e1cc')
+        print(dict(table.properties))
+        for value in table._relation_reference.values():
+            print(dict(value))
+        # print(dict(table._relation_reference))
+
+    def test_rollup_full_case(self):
+        table = notion.get_database('c0dbfa46ba0046d294f087f4a1c5e1cc')
+        rollup_list = [k for k, v in table.properties.items() if v.type == 'rollup']
+        print(rollup_list)
+
+
+        for r in rollup_list:
+
+            db_filter = filter()
+            rollup = table.properties[r]
+            relation = table.properties[rollup.rollup['relation_property_name']]
+            relation_db_id = relation.relation['database_id']
+            relation_refer = table._relation_reference[relation_db_id]
+            rollup_property_id = rollup.rollup['rollup_property_id']
+            rollup_type = relation_refer[rollup_property_id]
+
+            print('rollup type:', rollup_type)
+
+            # database에서 이를 통해 '릴레이션 데이터' 정보를 생성하여 가지고 다닐것.
+            # '릴레이션'에 '릴레이션'을 걸어 '릴레이션'을 걸 수 있을까? -> '롤업'에 대하여는 '릴레이션' 불가
+            # -> '롤업'에 대한 '릴레이션'을 추적하여 '릴레이션 타입'만 참고할 수 있도록 하면 될듯 함.
+            # api는 접근이 가능한 '릴레이션'에 대하여만 노출을 하여줌.
+            # relation_db_id = relation.relation['database_id']
+
+
+            # print(rollup.name, rollup.type, rollup.rollup.keys(), pdir(rollup))
+            # condition_text = filter_text(filter_text.TYPE_RICHTEXT, 'Rollup_text')
+            # condition_text.contains('text')
+            # condition_rollup = filter_rollup('Rollup_text')
+            # condition_rollup.any(condition_text)
+            # db_filter.add(condition_rollup)
+            #
+            # print(db_filter.get_body())
+            # result = test_table.get_as_dictionaries(test_table._filter_and_sort(notion_filter=db_filter))
+            # print(result)

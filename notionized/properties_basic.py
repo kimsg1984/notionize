@@ -1,12 +1,14 @@
-from notion_api.functions import from_rich_text_array_to_plain_text, from_plain_text_to_rich_text_array, pdir
+from notionized.functions import from_rich_text_array_to_plain_text, from_plain_text_to_rich_text_array, pdir
 
-from notion_api.object_adt import MutableProperty, ListObject
-from notion_api.object_basic import NotionObject
+from notionized.object_adt import MutableProperty, ListObject, ImmutableProperty
+from notionized.object_basic import NotionObject
 
 from typing import Dict
 from typing import Tuple
 from typing import Any
 from typing import Callable
+
+from urllib import parse
 _log = __import__('logging').getLogger(__name__)
 
 
@@ -32,6 +34,21 @@ class TitleProperty(MutableProperty):
             value = from_plain_text_to_rich_text_array(value)
 
         super().__set__(obj, value)
+
+
+class IdProperty(ImmutableProperty):
+    """
+    Property for id of properties with decoding 'url'.
+    """
+
+    def __set__(self, obj: Any, value: Any) -> None:
+        """
+        set with decoding event
+        :param obj:
+        :param value:
+        :return:
+        """
+        super().__set__(obj, parse.unquote(value))
 
 
 class PropertyObject(NotionObject):
@@ -90,7 +107,17 @@ class PagePropertyObject(PropertyObject):
                 return value
 
         elif isinstance(value, (list, ListObject)):
-            return tuple([e['name'].replace(u'\xa0', u' ') for e in value])
+            result = []
+            for e in value:
+                if hasattr(e, '__getitem__') and 'name' in e:
+                    result.append(e['name'].replace(u'\xa0', u' '))
+                elif hasattr(e, 'name') and e.name == 'relation':
+                    result.append(e['id'])
+                elif hasattr(e, 'name'):
+                    result.append(e.name.replace(u'\xa0', u' '))
+                else:
+                    result.append(e)
+            return tuple(result)
         else:
             return value
 
@@ -103,6 +130,7 @@ class DbPropertyObject(PropertyObject):
     _type_defined = ''
     _mutable = False
 
+    id = IdProperty()
     name = MutableProperty()
     type = MutableProperty()
     _input_validation: Tuple[Callable[[Any], Any], ...] = tuple()

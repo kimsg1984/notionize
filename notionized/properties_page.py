@@ -1,8 +1,8 @@
-from notion_api.functions import from_rich_text_array_to_plain_text
-from notion_api.functions import parse_date_object
-from notion_api.object_adt import MutableProperty
-from notion_api.properties_basic import PagePropertyObject
-from notion_api.object_basic import UserObject
+from notionized.functions import from_rich_text_array_to_plain_text
+from notionized.functions import parse_date_object
+from notionized.object_adt import MutableProperty
+from notionized.properties_basic import PagePropertyObject
+from notionized.object_basic import UserObject
 from typing import Any, Dict, List
 
 

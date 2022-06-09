@@ -52,13 +52,10 @@ import ast
 import _ast
 import time
 
-from notion_api import properties_basic
-from notion_api.properties_basic import DbPropertyObject
-from notion_api.functions import pdir
-from notion_api.exception import NotionApiQueoryException
-# from notion_api.object_adt import ChangeMroMeta
-# import typing
-# typing.Optional
+from notionized import properties_basic
+from notionized.properties_basic import DbPropertyObject
+from notionized.functions import pdir
+from notionized.exception import NotionApiQueoryException
 
 log = __import__('logging').getLogger(__name__)
 
@@ -772,9 +769,203 @@ class filter_formula(filter_text, filter_checkbox, filter_number, filter_date, m
         body['formula'] = {self._property_type: copy.deepcopy(self._body[self._property_type])}
         # log.info(f"formula body: {self._body}")
         return body
+
+
+class filter_people(FilterConditionEmpty, FilterConditionContains):
+    """
+    filter for 'people'.
+    """
+
+    data_type = 'people'
+
+    TYPE_PEOPLE = 'people'
+    TYPE_CREATED_BY = 'created_by'
+    TYPE_LAST_EDITED_BY = 'last_edited_by'
+
+    def __init__(self, property_type: str, property_name: str):
+        """
+        initialize 'filter_people' instance
+        Args:
+            property_name:
+        """
+
+        super().__init__(property_name, property_type=property_type)
+
+    def contains(self, user_id: str) -> 'filter_people':
+        """
+
+        :return: filter_people
+        """
+
+        self._body[self._property_type]['contains'] = user_id
+        return self
+
+    def does_not_contain(self, user_id: str) -> 'filter_people':
+        """
+
+        :return: filter_people
+        """
+
+        self._body[self._property_type]['does_not_contain'] = user_id
+        return self
+
+    def is_empty(self) -> 'filter_people':
+        """
+
+        :return: filter_people
+        """
+        self._body[self._property_type]['is_empty'] = True
+
+        return self
+
+    def is_not_empty(self) -> 'filter_people':
+        """
+
+        :return: filter_people
+        """
+        self._body[self._property_type]['is_not_empty'] = True
+        return self
+
+
+class filter_relation(FilterConditionEmpty, FilterConditionContains):
+    """
+    filter for 'relation'.
+    """
+
+    data_type = 'relation'
+
+    def __init__(self, property_name: str):
+        """
+        initialize 'filter_people' instance
+        Args:
+            property_name:
+        """
+        super().__init__(property_name, property_type='relation')
+
+    def contains(self, page_id: str) -> 'filter_relation':
+        """
+
+        :return: filter_relation
+        """
+
+        self._body[self._property_type]['contains'] = page_id
+        return self
+
+    def does_not_contain(self, page_id: str) -> 'filter_relation':
+        """
+
+        :return: filter_relation
+        """
+
+        self._body[self._property_type]['does_not_contain'] = page_id
+        return self
+
+    def is_empty(self) -> 'filter_relation':
+        """
+
+        :return: filter_relation
+        """
+        self._body[self._property_type]['is_empty'] = True
+
+        return self
+
+    def is_not_empty(self) -> 'filter_relation':
+        """
+
+        :return: filter_relation
+        """
+        self._body[self._property_type]['is_not_empty'] = True
+        return self
+
+
+class filter_rollup(FilterConditionABC):
+    """
+    filter for 'rollup'.
+    """
+
+    data_type = 'rollup'
+
+    """
+    {
+        "property": "Rollup_text",
+        "rollup": { "any": { "rich_text": { "contains": "text" }}} 
+    }
+    
+    """
+    def __init__(self, property_name: str):
+        """
+        initialize 'filter_people' instance
+        Args:
+            property_name:
+        """
+        super().__init__(property_name, property_type='rollup')
+
+    def any(self, filter_ins: FilterConditionABC) -> 'filter_rollup':
+        """
+        'filter_rollup' instance requires another 'filter instance', the title of which doesn't matter.
+
+        :param filter_ins: any of 'filter' instance
+        :return:
+        """
+
+        ins_body: Dict[str, Any] = filter_ins.get_body()
+        ins_type: str = filter_ins._property_type
+        self._body[self._property_type]['any'] = {ins_type: ins_body[ins_type]}
+        return self
+
+    def every(self, filter_ins: FilterConditionABC) -> 'filter_rollup':
+        """
+        'filter_rollup' instance requires another 'filter instance', the title of which doesn't matter.
+
+        :param filter_ins: any of 'filter' instance
+        :return:
+        """
+        ins_body: Dict[str, Any] = filter_ins.get_body()
+        ins_type: str = filter_ins._property_type
+        self._body[self._property_type]['every'] = {ins_type: ins_body[ins_type]}
+        return self
+
+    def none(self, filter_ins: FilterConditionABC) -> 'filter_rollup':
+        """
+        'filter_rollup' instance requires another 'filter instance', the title of which doesn't matter.
+
+        :param filter_ins: any of 'filter' instance
+        :return:
+        """
+        ins_body: Dict[str, Any] = filter_ins.get_body()
+        ins_type: str = filter_ins._property_type
+        self._body[self._property_type]['none'] = {ins_type: ins_body[ins_type]}
+        return self
+
+    def number(self, filter_ins: filter_number) -> 'filter_rollup':
+        """
+        'filter_rollup' instance requires another 'filter instance', the title of which doesn't matter.
+
+        :param filter_ins: any of 'filter' instance
+        :return:
+        """
+        ins_body: Dict[str, Any] = filter_ins.get_body()
+        ins_type: str = filter_ins._property_type
+        self._body[self._property_type]['number'] = {ins_type: ins_body[ins_type]}
+        return self
+
+    def date(self, filter_ins: filter_date) -> 'filter_rollup':
+        """
+        'filter_rollup' instance requires another 'filter instance', the title of which doesn't matter.
+
+        :param filter_ins: any of 'filter' instance
+        :return:
+        """
+        ins_body: Dict[str, Any] = filter_ins.get_body()
+        ins_type: str = filter_ins._property_type
+        self._body[self._property_type]['date'] = {ins_type: ins_body[ins_type]}
+        return self
+
+
 """
 SORTS
 """
+
 
 class sorts:
 
@@ -1014,17 +1205,17 @@ T_Filter = TypeVar('T_Filter', FilterConditionEmpty, FilterConditionEquals, Filt
 T_Sorts = TypeVar('T_Sorts', SortObject, sorts)
 
 
-class GenericFilter(Generic[T_Filter]):
-    pass
-
-
 class Query:
     """
     'Query' object which contains 'expression parser' and 'filter object constructor'.
 
     """
 
-    def __init__(self, db_properties: DbPropertyObject):
+    def __init__(self, db_properties: Any):
+        """
+
+        :param db_properties: PropertiesProperty
+        """
         self.properties = db_properties
         self._error_with_expr = ''
         self.expression = ''

@@ -16,29 +16,30 @@ Fallow rules make python object safety from user assignment event.
 
 """
 
-from typing import Type
+from notionized.http_request import HttpRequest
 
-from notion_api.http_request import HttpRequest
+from notionized.object_basic import NotionObject
+from notionized.object_basic import UserObject
+from notionized.object_basic import ObjectProperty
+from notionized.object_adt import DictionaryObject
+from notionized.properties_basic import PropertyObject
+from notionized.properties_property import PropertiesProperty
+from notionized.functions import notion_object_init_handler
+from notionized.properties_basic import TitleProperty, PagePropertyObject, DbPropertyObject
+from notionized.object_adt import ImmutableProperty, MutableProperty
+from notionized.properties_db import DbPropertyRelation
 
-from notion_api.object_basic import NotionObject
-from notion_api.object_basic import UserObject
-from notion_api.object_basic import ObjectProperty
-from notion_api.properties_basic import PropertyObject
-from notion_api.properties_property import PropertiesProperty
-from notion_api.functions import notion_object_init_handler
-from notion_api.properties_basic import TitleProperty, PagePropertyObject, DbPropertyObject
-from notion_api.object_adt import ImmutableProperty, MutableProperty
-
-from notion_api.query import Query
-from notion_api.query import filter
-from notion_api.query import T_Filter
-from notion_api.query import T_Sorts
+from notionized.query import Query
+from notionized.query import filter
+from notionized.query import T_Filter
+from notionized.query import T_Sorts
 
 from typing import Optional
 from typing import Any
 from typing import Dict
 from typing import List
 from typing import Union
+from typing import Set
 
 from types import SimpleNamespace
 
@@ -54,8 +55,8 @@ class NotionBasicObject(NotionObject):
     _api_url: str
     id: ImmutableProperty
 
-    def __new__(cls, request: HttpRequest, data: Dict[str, Any], instance_id: Optional[str] = None) \
-            -> 'NotionBasicObject':
+    def __new__(cls, request: HttpRequest, data: Dict[str, Any], instance_id: Optional[str] = None
+                , **kwargs) -> 'NotionBasicObject':
         """
         construct '_NotionBasicObject' class.
 
@@ -162,10 +163,10 @@ Where user objects appear in the API
 User objects appear in the API in nearly all objects returned by the API, including:
 
 [v] 'Database' object under 'created_by' and 'last_edited_by'.
-[ ] 'Page' object under created_by and last_edited_by and in people property items.
+[v] 'Page' object under created_by and last_edited_by and in people property items.
+[v] 'Property' object when the property is a people property.
 [ ] 'Block' object under created_by and last_edited_by.
 [ ] 'Rich text' object, as user mentions.
-[ ] 'Property' object when the property is a people property.
 """
 
 
@@ -224,13 +225,13 @@ class Database(NotionBasicObject):
     properties: PropertiesProperty = PropertiesProperty(object_type='database')
 
     @notion_object_init_handler
-    def __init__(self, request: HttpRequest, data: Dict[str, Any]):
+    def __init__(self, request: HttpRequest, data: Dict[str, Any], update_relation: bool = True):
         """
-        initilize Database instance.
+         initilize Database instance.
 
-        Args:
-            request: Notion._request
-            data: returned from ._request
+        :param request: Notion._request
+        :param data: returned from ._request
+        :param update_relation: (bool) assign 'False' for 'database object' of checking relation reference
         """
 
         object_type = data['object']
@@ -238,8 +239,10 @@ class Database(NotionBasicObject):
 
         _log.debug(" ".join(map(str, ('Database:', self))))
         super().__init__(request, data)
-
+        self._relation_reference: Dict[str, DictionaryObject] = dict()
         self._query_helper = Query(self.properties)
+        if update_relation:
+            self._update_relation_reference()
 
     def __str__(self) -> str:
         title = ''
@@ -249,6 +252,28 @@ class Database(NotionBasicObject):
             pass
         str_content = f"<'{self.__class__.__name__}{title}'>"
         return str_content
+
+    def _update_relation_reference(self) -> None:
+        """
+        update relation reference to
+        :return:
+        """
+        relation_db_id_set: Set[str] = set()
+        prop: DbPropertyRelation
+        for prop in self.properties.values():
+            if prop.type == 'relation':
+                relation_db_id_set.add(prop.relation['database_id'])
+
+        for db_id in relation_db_id_set:
+            db: 'Database' = Database(*self._request.get('v1/databases/' + db_id), update_relation=False)
+
+            sub_prop: DbPropertyObject
+            sub_prop_dict: Dict[str, str] = dict()
+
+            for sub_prop in db.properties.values():
+                sub_prop_dict[str(sub_prop.id)] = str(sub_prop.type)  # type: ignore
+
+            self._relation_reference[db_id] = DictionaryObject('relation_properties', self, sub_prop_dict)
 
     def query(self, query_expression: str) -> QueriedPageIterator:
         """
@@ -417,7 +442,7 @@ class Page(NotionBasicObject):
         :return: {'key' : value, ...}
         """
         result = dict()
-        for k, v in self.properties.items():  # type: ignore
+        for k, v in self.properties.items():
             result[k] = v.get_value()
 
         return result

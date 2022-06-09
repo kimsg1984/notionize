@@ -739,11 +739,11 @@ def pdir(obj, level='public'):
 
 def dev1():
 
-    import notion_api.notion
+    import notionized.notion
     from pprint import pprint
-    from notion_api.query import filter
+    from notionized.query import filter
     import time
-    notion = notion_api.notion.Notion('secret_rvDkx9qH8AVG3aKBVwZ4r5Byo75uoAPMrQ1I6bo4d6G')
+    notion = notionized.notion.Notion('secret_rvDkx9qH8AVG3aKBVwZ4r5Byo75uoAPMrQ1I6bo4d6G')
     # d3 = notion.get_database('6c3409803b7643b9b818b78765b69c82')
     # d3 = notion.get_database('f7001a895f39403eae3d90b6451639f4')  # test2
     d3 = notion.get_database('44d6b8fda2734f04968a771a79f97fb6') # test1

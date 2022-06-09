@@ -1,9 +1,7 @@
-# database = ['object', 'id', 'cover', 'icon', 'created_time', 'last_edited_time', 'title', 'properties', 'parent', 'url']
-# page = ['archived', 'cover', 'created_time', 'icon', 'id', 'last_edited_time', 'object', 'parent', 'properties', 'url']
+from notionized import Notion
 
-database = ['object', 'id', 'cover', 'icon', 'created_time', 'last_edited_time', 'title', 'properties', 'parent', 'url']
-page = ['archived', 'cover', 'created_time', 'icon', 'id', 'last_edited_time', 'object', 'parent', 'properties', 'url']
-block = ['object','id','type','created_time','created_by','last_edited_time','last_edited_by','archived','has_children']
+notion = Notion('secret_rvDkx9qH8AVG3aKBVwZ4r5Byo75uoAPMrQ1I6bo4d6G')
 
+d1 = notion.get_database('697427beba38481d84234a16849fd4dc')
 
-print(set(database).intersection(set(page)).intersection(set(block)))
+print(d1)

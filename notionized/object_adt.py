@@ -5,7 +5,7 @@ from typing import Any
 from typing import KeysView
 
 
-from notion_api.exception import NotionApiPropertyException, NotionApiPropertyUnassignedException
+from notionized.exception import NotionApiPropertyException, NotionApiPropertyUnassignedException
 
 _log = __import__('logging').getLogger(__name__)
 
@@ -70,7 +70,7 @@ class DictionaryObject(MutableMapping[str, Any]):
         if data:
             self.__set__(owner, data)
 
-    def _get_keys(self, long=False) -> str:
+    def _get_keys(self, long: bool = False) -> str:
         try:
             element_list = list()
 
@@ -117,7 +117,6 @@ class DictionaryObject(MutableMapping[str, Any]):
             raise NotionApiPropertyException(f"values of '_DictionaryObject' already assigned")
 
     # Implement MutableMapping method
-
     def __getitem__(self, key):
         return self._data[key]
 

@@ -8,17 +8,17 @@ import logging as _logging
 _log = _logging.getLogger(__name__)
 _logging.basicConfig(format='%(asctime)s [%(filename)s:%(lineno)s|%(levelname)s] %(funcName)s(): %(message)s')
 
-from notion_api.http_request import HttpRequest
-from notion_api.objects import Database
-from notion_api.objects import Page
-from notion_api.objects import User
+from notionized.http_request import HttpRequest
+from notionized.objects import Database
+from notionized.objects import Page
+from notionized.objects import User
 
 
 class Notion:
     f"""
     Notion 
     
-    'Notion' is basic object of 'notion-api' module.
+    'Notion' is basic object of 'notionized' module.
     """
 
     def __init__(self, secret_key: str):

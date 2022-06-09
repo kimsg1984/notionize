@@ -1,9 +1,9 @@
-from notion_api.object_adt import DictionaryObject, ImmutableProperty
-from notion_api.object_basic import _log
-from notion_api.properties_basic import PropertyObject, PagePropertyObject, DbPropertyObject
+from notionized.object_adt import DictionaryObject, ImmutableProperty
+from notionized.object_basic import _log
+from notionized.properties_basic import PropertyObject, PagePropertyObject, DbPropertyObject
 
-import notion_api.properties_page
-import notion_api.properties_db
+import notionized.properties_page
+import notionized.properties_db
 from typing import Any
 from typing import Dict
 from typing import Optional
@@ -109,14 +109,14 @@ Dynamic Properties Descriptor Assignment
 : depend on 'PropertiesProperty'
 """
 
-for key in dir(notion_api.properties_db):
+for key in dir(notionized.properties_db):
     db_keyword = 'DbProperty'
     if key[:len(db_keyword)] == db_keyword:
-        property_cls: DbPropertyObject = getattr(notion_api.properties_db, key)
-        database_properties_mapper[property_cls._type_defined] = property_cls
+        property_cls_db: DbPropertyObject = getattr(notionized.properties_db, key)
+        database_properties_mapper[property_cls_db._type_defined] = property_cls_db
 
-for key in dir(notion_api.properties_page):
+for key in dir(notionized.properties_page):
     page_keyword = 'PageProperty'
     if key[:len(page_keyword)] == page_keyword:
-        property_cls: PagePropertyObject = getattr(notion_api.properties_page, key)
-        page_properties_mapper[property_cls._type_defined] = property_cls
+        property_cls_page: PagePropertyObject = getattr(notionized.properties_page, key)
+        page_properties_mapper[property_cls_page._type_defined] = property_cls_page
