@@ -15,7 +15,6 @@ from .exception import NotionApiQueoryException
 
 __version__ = "0.0.1"
 
-
 def __go(lcls):
     global __all__
     import inspect as _inspect
