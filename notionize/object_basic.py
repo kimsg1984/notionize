@@ -1,6 +1,6 @@
-from notionized.object_adt import DictionaryObject, ListObject, ImmutableProperty
-from notionized.exception import NotionApiPropertyException
-from notionized.http_request import HttpRequest
+from notionize.object_adt import DictionaryObject, ListObject, ImmutableProperty
+from notionize.exception import NotionApiPropertyException
+from notionize.http_request import HttpRequest
 from typing import Any
 from typing import Optional
 from typing import Dict

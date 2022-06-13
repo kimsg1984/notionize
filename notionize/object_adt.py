@@ -5,7 +5,7 @@ from typing import Any
 from typing import KeysView
 
 
-from notionized.exception import NotionApiPropertyException, NotionApiPropertyUnassignedException
+from notionize.exception import NotionApiPropertyException, NotionApiPropertyUnassignedException
 
 _log = __import__('logging').getLogger(__name__)
 

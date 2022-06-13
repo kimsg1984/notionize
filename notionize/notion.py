@@ -8,10 +8,10 @@ import logging as _logging
 _log = _logging.getLogger(__name__)
 _logging.basicConfig(format='%(asctime)s [%(filename)s:%(lineno)s|%(levelname)s] %(funcName)s(): %(message)s')
 
-from notionized.http_request import HttpRequest
-from notionized.objects import Database
-from notionized.objects import Page
-from notionized.objects import User
+from notionize.http_request import HttpRequest
+from notionize.objects import Database
+from notionize.objects import Page
+from notionize.objects import User
 
 
 class Notion:

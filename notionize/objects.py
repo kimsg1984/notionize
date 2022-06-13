@@ -16,23 +16,23 @@ Fallow rules make python object safety from user assignment event.
 
 """
 
-from notionized.http_request import HttpRequest
+from notionize.http_request import HttpRequest
 
-from notionized.object_basic import NotionObject
-from notionized.object_basic import UserObject
-from notionized.object_basic import ObjectProperty
-from notionized.object_adt import DictionaryObject
-from notionized.properties_basic import PropertyObject
-from notionized.properties_property import PropertiesProperty
-from notionized.functions import notion_object_init_handler
-from notionized.properties_basic import TitleProperty, PagePropertyObject, DbPropertyObject
-from notionized.object_adt import ImmutableProperty, MutableProperty
-from notionized.properties_db import DbPropertyRelation
+from notionize.object_basic import NotionObject
+from notionize.object_basic import UserObject
+from notionize.object_basic import ObjectProperty
+from notionize.object_adt import DictionaryObject
+from notionize.properties_basic import PropertyObject
+from notionize.properties_property import PropertiesProperty
+from notionize.functions import notion_object_init_handler
+from notionize.properties_basic import TitleProperty, PagePropertyObject, DbPropertyObject
+from notionize.object_adt import ImmutableProperty, MutableProperty
+from notionize.properties_db import DbPropertyRelation
 
-from notionized.query import Query
-from notionized.query import filter
-from notionized.query import T_Filter
-from notionized.query import T_Sorts
+from notionize.query import Query
+from notionize.query import filter
+from notionize.query import T_Filter
+from notionize.query import T_Sorts
 
 from typing import Optional
 from typing import Any

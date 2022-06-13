@@ -1,7 +1,7 @@
-from notionized.functions import from_rich_text_array_to_plain_text, from_plain_text_to_rich_text_array, pdir
+from notionize.functions import from_rich_text_array_to_plain_text, from_plain_text_to_rich_text_array, pdir
 
-from notionized.object_adt import MutableProperty, ListObject, ImmutableProperty
-from notionized.object_basic import NotionObject
+from notionize.object_adt import MutableProperty, ListObject, ImmutableProperty
+from notionize.object_basic import NotionObject
 
 from typing import Dict
 from typing import Tuple

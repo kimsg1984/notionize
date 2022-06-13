@@ -9,7 +9,7 @@ import requests  # type: ignore
 import json
 import logging
 
-from notionized import settings
+from notionize import settings
 
 from typing import Dict, Any, Tuple, TypeVar
 

@@ -1,8 +1,8 @@
-from notionized.functions import from_rich_text_array_to_plain_text
-from notionized.functions import parse_date_object
-from notionized.object_adt import MutableProperty
-from notionized.properties_basic import PagePropertyObject
-from notionized.object_basic import UserObject
+from notionize.functions import from_rich_text_array_to_plain_text
+from notionize.functions import parse_date_object
+from notionize.object_adt import MutableProperty
+from notionize.properties_basic import PagePropertyObject
+from notionize.object_basic import UserObject
 from typing import Any, Dict, List
 
 

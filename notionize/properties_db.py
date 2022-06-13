@@ -1,7 +1,7 @@
-from notionized.properties_basic import DbPropertyObject
-from notionized.properties_basic import TitleProperty
-from notionized.object_adt import DictionaryObject
-from notionized.functions import from_plain_text_to_rich_text_array
+from notionize.properties_basic import DbPropertyObject
+from notionize.properties_basic import TitleProperty
+from notionize.object_adt import DictionaryObject
+from notionize.functions import from_plain_text_to_rich_text_array
 from typing import Any
 from typing import Dict
 

@@ -1,1 +1,1 @@
-from notionized import Notion
+from notionize import Notion

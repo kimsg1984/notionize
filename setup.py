@@ -9,17 +9,17 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 reqs = parse_requirements("requirements.txt", session=False)
-install_requires = [str(ir.req) for ir in reqs]
+install_requires = [str(ir.requirement) for ir in reqs]
 
 setuptools.setup(
-    name="notion",
+    name="notionize",
     version="0.0.1",
     author="SeonGyo Kim",
     author_email="kimsg1984@gmail.com",
     description="Python wrapper for Notion API",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/kimsg1984/notion-api",
+    url="https://github.com/kimsg1984/notionize",
     install_requires=install_requires,
     include_package_data=True,
     packages=setuptools.find_packages(),
