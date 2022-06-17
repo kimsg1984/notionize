@@ -33,8 +33,11 @@ def parse_date_object(date_obj: Dict[str, Any]) -> str:
     return content
 
 
-def from_plain_text_to_rich_text_array(string: str) -> List[Dict[str, Any]]:
-    return [{"text": {"content": string}}]
+def from_plain_text_to_rich_text_array(string: str, link: Any = '') -> List[Dict[str, Any]]:
+    content = {"content": string}
+    if link != '':
+        content['link'] = link
+    return [{"text": content}]
 
 
 def notion_object_init_handler(init_function: Callable[..., None]) -> Callable[..., None]:
