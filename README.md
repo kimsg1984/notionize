@@ -1,5 +1,5 @@
-# notionized
+# notionizer
 
-Notionize your life with python module **notionized**!
+Notionize your life with python module **notionizer**!
 
 
