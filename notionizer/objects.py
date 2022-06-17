@@ -16,22 +16,22 @@ Fallow rules make python object safety from user assignment event.
 
 """
 
-from notionize.http_request import HttpRequest
+from notionizer.http_request import HttpRequest
 
-from notionize.object_basic import NotionObject
-from notionize.object_basic import UserObject
-from notionize.object_adt import DictionaryObject
-from notionize.properties_property import PropertiesProperty
-from notionize.functions import notion_object_init_handler
-from notionize.functions import from_plain_text_to_rich_text_array
-from notionize.properties_basic import TitleProperty, DbPropertyObject
-from notionize.object_adt import ImmutableProperty, MutableProperty
-from notionize.properties_db import DbPropertyRelation
+from notionizer.object_basic import NotionObject
+from notionizer.object_basic import UserObject
+from notionizer.object_adt import DictionaryObject
+from notionizer.properties_property import PropertiesProperty
+from notionizer.functions import notion_object_init_handler
+from notionizer.functions import from_plain_text_to_rich_text_array
+from notionizer.properties_basic import TitleProperty, DbPropertyObject
+from notionizer.object_adt import ImmutableProperty, MutableProperty
+from notionizer.properties_db import DbPropertyRelation
 
-from notionize.query import Query
-from notionize.query import filter
-from notionize.query import T_Filter
-from notionize.query import T_Sorts
+from notionizer.query import Query
+from notionizer.query import filter
+from notionizer.query import T_Filter
+from notionizer.query import T_Sorts
 
 from typing import Optional
 from typing import Any
@@ -465,9 +465,9 @@ class Page(NotionBasicObject):
 
         [Usage]
 
-        from notionize import Property as Prop
-        from notionize import NumberFormat as NumForm
-        from notionize import OptionColor as OptColor
+        from notionizer import Property as Prop
+        from notionizer import NumberFormat as NumForm
+        from notionizer import OptionColor as OptColor
 
         db = page.create_database(
             title='DB Title',
@@ -632,7 +632,7 @@ class Property:
 
     [Usage]
 
-    from notionize import Property as Prop
+    from notionizer import Property as Prop
     notion.create_database("title", properties = [Prop.Checkbox("prop. name"), ...])
     """
 
@@ -658,7 +658,7 @@ class Property:
             :param format:
 
             [Usage]
-            from notionize import NumberFormat as NumForm
+            from notionizer import NumberFormat as NumForm
             notion.create_database("title", properties = [Prop.Number("number", format = NumForm.dollar), ...])
             """
             self.name = name
@@ -677,7 +677,7 @@ class Property:
 
             [Usage]
 
-            from notionize import OptionColor as OptColor
+            from notionizer import OptionColor as OptColor
 
             notion.create_database("title", properties = [
                 Prop.Select(
@@ -702,7 +702,7 @@ class Property:
 
             [Usage]
 
-            from notionize import OptionColor as OptColor
+            from notionizer import OptionColor as OptColor
             notion.create_database("title", properties = [
                 Prop.MultiSelect(
                     "prop. name",
@@ -801,7 +801,7 @@ class Property:
             [Usage]
 
 
-            from notionize import RollupFunction as RFunc
+            from notionizer import RollupFunction as RFunc
             notion.create_database("title", properties = [
                 Prop.Rollup(
                     "rollup",

@@ -52,10 +52,10 @@ import ast
 import _ast
 import time
 
-from notionize import properties_basic
-from notionize.properties_basic import DbPropertyObject
-from notionize.functions import pdir
-from notionize.exception import NotionApiQueoryException
+from notionizer import properties_basic
+from notionizer.properties_basic import DbPropertyObject
+from notionizer.functions import pdir
+from notionizer.exception import NotionApiQueoryException
 
 log = __import__('logging').getLogger(__name__)
 

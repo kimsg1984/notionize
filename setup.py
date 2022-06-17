@@ -12,7 +12,7 @@ reqs = parse_requirements("requirements.txt", session=False)
 install_requires = [str(ir.requirement) for ir in reqs]
 
 setuptools.setup(
-    name="notionize",
+    name="notionizer",
     version="0.0.1",
     author="SeonGyo Kim",
     author_email="kimsg1984@gmail.com",
