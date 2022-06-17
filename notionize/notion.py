@@ -16,8 +16,8 @@ from notionize.objects import User
 
 class Notion:
     f"""
-    Notion 
-    
+    Notion
+
     'Notion' is basic object of 'notionized' module.
     """
 
@@ -81,4 +81,3 @@ class Notion:
 
     def get_block(self, block_id: str):
         pass
-

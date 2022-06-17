@@ -20,12 +20,11 @@ from notionize.http_request import HttpRequest
 
 from notionize.object_basic import NotionObject
 from notionize.object_basic import UserObject
-from notionize.object_basic import ObjectProperty
 from notionize.object_adt import DictionaryObject
-from notionize.properties_basic import PropertyObject
 from notionize.properties_property import PropertiesProperty
 from notionize.functions import notion_object_init_handler
-from notionize.properties_basic import TitleProperty, PagePropertyObject, DbPropertyObject
+from notionize.functions import from_plain_text_to_rich_text_array
+from notionize.properties_basic import TitleProperty, DbPropertyObject
 from notionize.object_adt import ImmutableProperty, MutableProperty
 from notionize.properties_db import DbPropertyRelation
 
@@ -41,7 +40,6 @@ from typing import List
 from typing import Union
 from typing import Set
 
-from types import SimpleNamespace
 
 _log = __import__('logging').getLogger(__name__)
 
@@ -271,7 +269,7 @@ class Database(NotionBasicObject):
             sub_prop_dict: Dict[str, str] = dict()
 
             for sub_prop in db.properties.values():
-                sub_prop_dict[str(sub_prop.id)] = str(sub_prop.type)  # type: ignore
+                sub_prop_dict[str(sub_prop.id)] = str(sub_prop.type)
 
             self._relation_reference[db_id] = DictionaryObject('relation_properties', self, sub_prop_dict)
 
@@ -447,4 +445,376 @@ class Page(NotionBasicObject):
 
         return result
 
+
+    def create_database(self,
+                        title: str = '',
+                        emoji: str = '',
+                        cover: str = '',
+                        parent: str = '',
+                        properties: list = []
+                        ) -> Database:
+
+        """
+
+        :param title:
+        :param emoji:
+        :param cover:
+        :param parent:
+        :param properties:
+        :return: Database
+
+        [Usage]
+
+        from notionize import Property as Prop
+        from notionize import NumberFormat as NumForm
+        from notionize import OptionColor as OptColor
+
+        db = page.create_database(
+            title='DB Title',
+            emoji="🎉",
+            cover="https://web.image.path/image.jpg",
+            properties
+
+            notion.create_database("title", properties = [
+                Prop.RichText("text filed"),
+                Prop.Number("number", format = NumForm.dollar),
+                Prop.Select("select", option = {'opt1': OptColor.blue, 'opt2': OptColor.red}),
+                Prop.MultiSelect("multi select", option = {'opt1': OptColor.blue, 'opt2': OptColor.red}),
+                ...
+                ]
+            )
+        )
+
+        """
+
+        data: Dict[str, Any] = {'parent': {'type': 'page_id'}, 'properties': {}}
+        if parent:
+            data['parent']['page_id'] = parent
+        else:
+            data['parent']['page_id'] = self.id
+
+        if title:
+            data['title'] = from_plain_text_to_rich_text_array(title)
+
+        if emoji:
+            data['icon'] = {'type': 'emoji'}
+            data['icon']['emoji'] = emoji
+
+        if cover:
+            data['cover'] = {'type': 'external'}
+            data['cover']['external'] = {'url': cover}
+
+        # properties validation
+        prop_names = sorted(p.name for p in properties)
+        prop_types = sorted(p.prop_type for p in properties)
+        assert len(properties) == len(set(prop_names)), f"please check duplicated name of property: {str(prop_names)}"
+
+        # title property should be included.
+        if 'title' not in prop_types:
+            default_name = 'Name'
+            unused_name = default_name
+            index = 0
+            while unused_name in prop_names:
+                index += 1
+                unused_name = default_name + str(index).zfill(2)
+
+            data['properties'][unused_name] = {"title": {}}
+
+        for p in properties:
+            data['properties'][p.name] = {p.prop_type: {}}
+
+            for opt in p.arguments.keys():
+                if opt == 'options':
+                    data['properties'][p.name][p.prop_type]['options'] = []
+                    for name, color in p.arguments[opt].items():
+                        data['properties'][p.name][p.prop_type]['options'].append({'name': name, 'color': color})
+                else:
+                    data['properties'][p.name][p.prop_type][opt] = p.arguments[opt]
+
+        db_object: Database = Database(*self._request.post('v1/databases/', data))
+        return db_object
+
+
+class OptionColor:
+    """
+    Enum using for Select and Multi-Select
+    """
+    default = 'default'
+    gray = 'gray'
+    brown = 'brown'
+    orange = 'orange'
+    yellow = 'yellow'
+    green = 'green'
+    blue = 'blue'
+    purple = 'purple'
+    pink = 'pink'
+    red = 'red'
+
+
+class NumberFormat:
+    """
+    Enum using for format of Number
+    """
+    number = 'number'
+    number_with_commas = 'number_with_commas'
+    percent = 'percent'
+    dollar = 'dollar'
+    canadian_dollar = 'canadian_dollar'
+    euro = 'euro'
+    pound = 'pound'
+    yen = 'yen'
+    ruble = 'ruble'
+    rupee = 'rupee'
+    won = 'won'
+    yuan = 'yuan'
+    real = 'real'
+    lira = 'lira'
+    rupiah = 'rupiah'
+    franc = 'franc'
+    hong_kong_dollar = 'hong_kong_dollar'
+    new_zealand_dollar = 'new_zealand_dollar'
+    krona = 'krona'
+    norwegian_krone = 'norwegian_krone'
+    mexican_peso = 'mexican_peso'
+    rand = 'rand'
+    new_taiwan_dollar = 'new_taiwan_dollar'
+    danish_krone = 'danish_krone'
+    zloty = 'zloty'
+    baht = 'baht'
+    forint = 'forint'
+    koruna = 'koruna'
+    shekel = 'shekel'
+    chilean_peso = 'chilean_peso'
+    philippine_peso = 'philippine_peso'
+    dirham = 'dirham'
+    colombian_peso = 'colombian_peso'
+    riyal = 'riyal'
+    ringgit = 'ringgit'
+    leu = 'leu'
+    argentine_peso = 'argentine_peso'
+    uruguayan_peso = 'uruguayan_peso'
+
+
+class RollupFunction:
+    """
+    Enum using for rollup funtion parameter
+    """
+
+    count = "count"
+    count_values = "count_values"
+    empty = "empty"
+    not_empty = "not_empty"
+    unique = "unique"
+    show_unique = "show_unique"
+    percent_empty = "percent_empty"
+    percent_not_empty = "percent_not_empty"
+    sum = "sum"
+    average = "average"
+    median = "median"
+    min = "min"
+    max = "max"
+    range = "range"
+    earliest_date = "earliest_date"
+    latest_date = "latest_date"
+    date_range = "date_range"
+    checked = "checked"
+    unchecked = "unchecked"
+    percent_checked = "percent_checked"
+    percent_unchecked = "percent_unchecked"
+    count_per_group = "count_per_group"
+    percent_per_group = "percent_per_group"
+    show_original = "show_original"
+
+
+class Property:
+    """
+    A group of property types defined for database creating.
+
+    [Usage]
+
+    from notionize import Property as Prop
+    notion.create_database("title", properties = [Prop.Checkbox("prop. name"), ...])
+    """
+
+    class Title:
+        def __init__(self, name):
+
+            self.name = name
+            self.prop_type = 'title'
+            self.arguments = {}
+
+    class RichText:
+        def __init__(self, name):
+
+            self.name = name
+            self.prop_type = 'rich_text'
+            self.arguments = {}
+
+    class Number:
+        def __init__(self, name, format=''):
+            """
+
+            :param name:
+            :param format:
+
+            [Usage]
+            from notionize import NumberFormat as NumForm
+            notion.create_database("title", properties = [Prop.Number("number", format = NumForm.dollar), ...])
+            """
+            self.name = name
+            self.prop_type = 'number'
+            self.arguments = {}
+
+            if format:
+                self.arguments['format'] = format
+
+    class Select:
+        def __init__(self, name, options={}):
+            """
+
+            :param name:
+            :param options: dictionary
+
+            [Usage]
+
+            from notionize import OptionColor as OptColor
+
+            notion.create_database("title", properties = [
+                Prop.Select(
+                    "prop. name",
+                    options={'option name': OptColor.red}
+                ), ...
+                ]
+            )
+            """
+            self.name = name
+            self.prop_type = 'select'
+            self.arguments = {}
+
+            if options:
+                self.arguments['options'] = options
+
+    class MultiSelect:
+        def __init__(self, name, options={}):
+            """
+            :param name:
+            :param options: dictionary
+
+            [Usage]
+
+            from notionize import OptionColor as OptColor
+            notion.create_database("title", properties = [
+                Prop.MultiSelect(
+                    "prop. name",
+                    options={'option name': OptColor.red}
+                ), ...
+                ]
+            )
+            """
+            self.name = name
+            self.prop_type = 'multi_select'
+            self.arguments = {}
+
+            if options:
+                self.arguments['options'] = options
+
+    class Date:
+        def __init__(self, name):
+
+            self.name = name
+            self.prop_type = 'date'
+            self.arguments = {}
+
+    class People:
+        def __init__(self, name):
+
+            self.name = name
+            self.prop_type = 'people'
+            self.arguments = {}
+
+    class Files:
+        def __init__(self, name):
+
+            self.name = name
+            self.prop_type = 'files'
+            self.arguments = {}
+
+    class Checkbox:
+        def __init__(self, name):
+
+            self.name = name
+            self.prop_type = 'checkbox'
+            self.arguments = {}
+
+    class Url:
+        def __init__(self, name):
+
+            self.name = name
+            self.prop_type = 'url'
+            self.arguments = {}
+
+    class Email:
+        def __init__(self, name):
+
+            self.name = name
+            self.prop_type = 'email'
+            self.arguments = {}
+
+    class PhoneNumber:
+        def __init__(self, name):
+
+            self.name = name
+            self.prop_type = 'phone_number'
+            self.arguments = {}
+
+    class Formula:
+        def __init__(self, name):
+
+            self.name = name
+            self.prop_type = 'formula'
+            self.arguments = {}
+
+    class Relation:
+        def __init__(self, name, database_id):
+            """
+
+            :param name:
+            :param database_id: UUID(str)
+
+            [Usage]
+            notion.create_database("title", properties = [Prop.Relation("relation", "668d797c-76fa-4934-9b05-ad288df2d136"), ...])
+            """
+            self.name = name
+            self.prop_type = 'relation'
+            self.arguments = {}
+            self.arguments['database_id'] = database_id
+
+    class Rollup:
+        def __init__(self, name, rollup_property_name, relation_property_name, function):
+            """
+
+            :param name:
+            :param rollup_property_name: property name from relation(str)
+            :param relation_property_name: relation property name (str)
+            :param function: count_all, count_values, count_unique_values, count_empty, count_not_empty, percent_empty, percent_not_empty, sum, average, median, min, max, range, show_original (str)
+
+            [Usage]
+
+
+            from notionize import RollupFunction as RFunc
+            notion.create_database("title", properties = [
+                Prop.Rollup(
+                    "rollup",
+                    rollup_property_name = "name",
+                    relation_property_name = "Meals",
+                    function = RFunc.count,
+                    ), ...
+                ])
+            """
+            self.name = name
+            self.prop_type = 'rollup'
+            self.arguments = {}
+            self.arguments['rollup_property_name'] = rollup_property_name
+            self.arguments['relation_property_name'] = relation_property_name
+            self.arguments['function'] = function
 
