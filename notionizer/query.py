@@ -46,6 +46,7 @@ from typing import Generic
 from typing import Tuple
 from typing import get_type_hints
 
+import sys
 import copy
 import abc
 import ast
@@ -58,6 +59,8 @@ from notionizer.functions import pdir
 from notionizer.exception import NotionApiQueoryException
 
 log = __import__('logging').getLogger(__name__)
+
+python_version = str(sys.version_info.major) + '.' + str(sys.version_info.minor)
 
 """
     filter: {
@@ -1010,23 +1013,39 @@ class sort_by_property(SortObject):
 EXPRESSION PARSING
 """
 
-T_Union = Union[_ast.AST,
-                _ast.Expr,
-                _ast.Module,
-                _ast.BoolOp,
-                _ast.Or,
-                _ast.Compare,
-                _ast.Eq,
-                _ast.Constant,
-                _ast.Name,
-                _ast.Load,
-                _ast.Num,  # type: ignore
-                _ast.Str,  # type: ignore
-                _ast.UnaryOp,
-                ]
+
+if python_version < '3.8':
+    T_Union = Union[_ast.AST,
+                    _ast.Expr,
+                    _ast.Module,
+                    _ast.BoolOp,
+                    _ast.Or,
+                    _ast.Compare,
+                    _ast.Eq,
+                    _ast.Constant,
+                    _ast.Name,
+                    _ast.Load,
+                    _ast.Num,  # type: ignore
+                    _ast.Str,  # type: ignore
+                    _ast.UnaryOp,
+                    ]
+
+else:
+    T_Union = Union[_ast.AST,
+                    _ast.Expr,
+                    _ast.Module,
+                    _ast.BoolOp,
+                    _ast.Or,
+                    _ast.Compare,
+                    _ast.Eq,
+                    _ast.Constant,
+                    _ast.Name,
+                    _ast.Load,
+                    _ast.Constant,  # replaced after 3.8
+                    _ast.UnaryOp,
+                    ]
 
 T_Node = Union[T_Union, List[T_Union]]
-
 
 op_map = {
     'AST': '',
@@ -1039,14 +1058,6 @@ op_map = {
     'Constant': '',
     'Name': '',
     'Load': '',
-
-    # Replaced by 'Constant' since python 3.8
-    'Num': '',
-    'Str': '',
-    'NameConstant': '',
-
-    'Assign': '',
-    ###
     'Add': '',
     'And': '',
     'AnnAssign': '',
@@ -1155,6 +1166,16 @@ op_map = {
     'unaryop': '',
     'withitem': '',
 }
+
+# Replaced by 'Constant' since python 3.8
+if python_version < '3.8':
+    op_map['Num'] = ''
+    op_map['Str'] = ''
+    op_map['NameConstant'] = ''
+    op_map['Assign'] = ''
+else:
+    op_map['Constant'] = ''
+
 
 ast_types_dict = {getattr(_ast, e): e for e in dir(_ast) if e in op_map}
 

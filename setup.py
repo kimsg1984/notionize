@@ -13,13 +13,13 @@ install_requires = [str(ir.requirement) for ir in reqs]
 
 setuptools.setup(
     name="notionizer",
-    version="0.0.1",
+    version="0.0.3",
     author="SeonGyo Kim",
     author_email="kimsg1984@gmail.com",
     description="Python wrapper for Notion API",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/kimsg1984/notionize",
+    url="https://github.com/kimsg1984/notionizer",
     install_requires=install_requires,
     include_package_data=True,
     packages=setuptools.find_packages(),
