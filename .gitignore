@@ -8,3 +8,4 @@ dist
 build
 notionizer.egg-info
 **/setting.py
+/venv/
