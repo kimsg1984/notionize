@@ -7,5 +7,10 @@
 dist
 build
 notionizer.egg-info
+<<<<<<< HEAD
 setting
 **/setting.py
+=======
+**/setting.py
+/venv/
+>>>>>>> 5bd48b5139eadfbedae3eecab7d5cf974d016eb4
