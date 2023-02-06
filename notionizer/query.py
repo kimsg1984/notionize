@@ -60,7 +60,10 @@ from notionizer.exception import NotionApiQueoryException
 
 log = __import__('logging').getLogger(__name__)
 
-python_version = str(sys.version_info.major) + '.' + str(sys.version_info.minor)
+# python_version = str(sys.version_info.major) + '.' + str(sys.version_info.minor)
+python_version_current = (sys.version_info.major, sys.version_info.minor)
+
+python_version_3_8 = (3, 8)
 
 """
     filter: {
@@ -1013,8 +1016,9 @@ class sort_by_property(SortObject):
 EXPRESSION PARSING
 """
 
+print(type(python_version_current))
 
-if python_version < '3.8':
+if python_version_current < python_version_3_8:
     T_Union = Union[_ast.AST,
                     _ast.Expr,
                     _ast.Module,
@@ -1168,7 +1172,7 @@ op_map = {
 }
 
 # Replaced by 'Constant' since python 3.8
-if python_version < '3.8':
+if python_version_current < python_version_3_8:
     op_map['Num'] = ''
     op_map['Str'] = ''
     op_map['NameConstant'] = ''
