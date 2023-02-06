@@ -18,7 +18,7 @@ class Notion:
     f"""
     Notion
 
-    'Notion' is basic object of 'notionized' module.
+    'Notion' is basic object of 'notionizer' module.
     """
 
     def __init__(self, secret_key: str):
