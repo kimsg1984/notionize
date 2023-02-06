@@ -7,4 +7,5 @@
 dist
 build
 notionizer.egg-info
+setting
 **/setting.py
