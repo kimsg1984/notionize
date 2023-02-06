@@ -1,0 +1,10 @@
+**/__pycache__
+#**/test*
+**/dev*
+**/work*
+**/.idea
+.DS_Store
+dist
+build
+notionizer.egg-info
+**/settings.py
