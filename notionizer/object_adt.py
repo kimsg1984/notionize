@@ -197,7 +197,7 @@ class ListObject(MutableSequence[Any]):
         # _log.debug(f"owner, value, {repr(owner)}, {repr(value)}")
 
         if self._data:
-            raise NotionApiPropertyException("values of '_ListObject' already assigned")
+            raise NotionApiPropertyException("values of 'ListObject' already assigned")
 
         mutable_status = self._mutable
 

@@ -8,9 +8,7 @@ from .objects import UserProperty
 from .objects import Database
 from .objects import Page
 from .objects import Property
-from .objects import NumberFormat
-from .objects import OptionColor
-from .objects import RollupFunction
+from .enum import OptionColor, NumberFormat, RollupFunction
 
 from .exception import NotionApiException
 from .exception import NotionApiPropertyException

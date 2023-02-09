@@ -81,4 +81,5 @@ class Notion:
         return me
 
     def get_block(self, block_id: str):
-        pass
+        raise NotImplementedError
+

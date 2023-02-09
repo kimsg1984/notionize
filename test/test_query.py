@@ -1,5 +1,7 @@
 import logging
 
+from notionizer import OptionColor
+
 
 
 # log_format = '%(lineno)s|%(levelname)s] %(funcName)s(): %(message)s'
@@ -91,6 +93,7 @@ def query_test(test_type: str, test_all=False) -> None:
 
     for r in test_rows:
         test_each_row(r, test_properties, result)
+
 
 
 def test_formula(r, formula_type, test_type):
