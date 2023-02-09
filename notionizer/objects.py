@@ -18,8 +18,8 @@ Fallow rules make python object safety from user assignment event.
 
 from notionizer.http_request import HttpRequest
 
-from notionizer.object_basic import NotionObject
-from notionizer.object_basic import UserObject
+from notionizer.object_basic import NotionBaseObject
+from notionizer.object_basic import UserBaseObject
 from notionizer.object_adt import DictionaryObject
 from notionizer.properties_property import PropertiesProperty
 from notionizer.functions import notion_object_init_handler
@@ -44,9 +44,9 @@ from typing import Set
 _log = __import__('logging').getLogger(__name__)
 
 
-class NotionBasicObject(NotionObject):
+class NotionUpdateBaseObject(NotionBaseObject):
     """
-    '_NotionBasicObject' with '_update' method which update information and refresh itself.
+    'NotionUpdateObject' overrides '_update' method for updating and refreshing itself.
     """
     _instances: Dict[str, Any] = {}
 
@@ -54,9 +54,9 @@ class NotionBasicObject(NotionObject):
     id: ImmutableProperty
 
     def __new__(cls, request: HttpRequest, data: Dict[str, Any], instance_id: Optional[str] = None
-                , **kwargs) -> 'NotionBasicObject':
+                , **kwargs) -> 'NotionUpdateBaseObject':
         """
-        construct '_NotionBasicObject' class.
+        construct 'NotionUpdateObject' class.
 
         check 'key' value and if instance is exist, reuse instance with renewed namespace.
         :param request:
@@ -64,15 +64,15 @@ class NotionBasicObject(NotionObject):
         :param instance_id:
         """
 
-        _log.debug(" ".join(map(str, ('NotionBasicObject:', cls))))
-        instance: 'NotionBasicObject' = super(NotionBasicObject, cls).__new__(cls, data)  # type: ignore
+        _log.debug(" ".join(map(str, ('NotionUpdateObject:', cls))))
+        instance: 'NotionUpdateBaseObject' = super(NotionUpdateBaseObject, cls).__new__(cls, data)  # type: ignore
 
         # assign 'new namespace' with 'unassigned descriptors'.
         if instance_id:
-            NotionBasicObject._instances[instance_id].__dict__ = instance.__dict__
+            NotionUpdateBaseObject._instances[instance_id].__dict__ = instance.__dict__
         else:
             instance_id = str(data['id'])
-            NotionBasicObject._instances[instance_id] = instance
+            NotionUpdateBaseObject._instances[instance_id] = instance
 
         return instance
 
@@ -83,7 +83,7 @@ class NotionBasicObject(NotionObject):
         :param data:
         :param instance_id:
         """
-        _log.debug(" ".join(map(str, ('NotionBasicObject:', self))))
+        _log.debug(" ".join(map(str, ('NotionUpdateObject:', self))))
         self._request: HttpRequest = request
         super().__init__(data)
 
@@ -91,7 +91,7 @@ class NotionBasicObject(NotionObject):
         url = self._api_url + str(self.id)
         request, data = self._request.patch(url, {property_name: contents})
         # update property of object using 'id' value.
-        cls: type(NotionBasicObject) = type(self)  # type: ignore
+        cls: type(NotionUpdateBaseObject) = type(self)  # type: ignore
         # update instance
         cls(request, data, instance_id=str(data['id']))
 
@@ -168,7 +168,7 @@ User objects appear in the API in nearly all objects returned by the API, includ
 """
 
 
-class User(NotionBasicObject, UserObject):
+class User(NotionUpdateBaseObject, UserBaseObject):
     """
     User Object
     """
@@ -203,12 +203,12 @@ class UserProperty(ImmutableProperty):
     User Property for Database, Page: 'created_by' and 'last_edited_by'
     """
 
-    def __set__(self, owner: NotionBasicObject, value: Dict[str, Any]) -> None:
+    def __set__(self, owner: NotionUpdateBaseObject, value: Dict[str, Any]) -> None:
         obj = User(owner._request, value)
         super().__set__(owner, obj)
 
 
-class Database(NotionBasicObject):
+class Database(NotionUpdateBaseObject):
 
     _api_url = 'v1/databases/'
 
@@ -406,7 +406,7 @@ class Database(NotionBasicObject):
         return Page(*self._request.post(url, payload))
 
 
-class Page(NotionBasicObject):
+class Page(NotionUpdateBaseObject):
     """
     Page Object
     """

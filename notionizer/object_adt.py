@@ -55,7 +55,7 @@ class DictionaryObject(MutableMapping[str, Any]):
         Initilize '_DictionaryObject'.
 
         :param name: str (property name)
-        :param owner: NotionObject (other name is parent)
+        :param owner: NotionBaseObject (other name is parent)
         :param data: if it assigned, object doesn't need 'additianl assigning event'.
         :param mutable: bool (default: False)
         """

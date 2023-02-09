@@ -77,6 +77,7 @@ class Notion:
         :return: User
         """
         me: User = User(*self._request.get('v1/users/me'))
+
         return me
 
     def get_block(self, block_id: str):

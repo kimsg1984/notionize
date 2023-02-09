@@ -1,7 +1,7 @@
 from notionizer.functions import from_rich_text_array_to_plain_text, from_plain_text_to_rich_text_array, pdir
 
 from notionizer.object_adt import MutableProperty, ListObject, ImmutableProperty
-from notionizer.object_basic import NotionObject
+from notionizer.object_basic import NotionBaseObject
 
 from typing import Dict
 from typing import Tuple
@@ -51,7 +51,7 @@ class IdProperty(ImmutableProperty):
         super().__set__(obj, parse.unquote(value))
 
 
-class PropertyObject(NotionObject):
+class PropertyBaseObject(NotionBaseObject):
     """
     Basic Object for Data and Page Properties.
     """
@@ -59,8 +59,8 @@ class PropertyObject(NotionObject):
     _type_defined = ''
 
     def __new__(cls, parent: Any, data: Dict[str, Any], parent_type: str, name: str, force_new: bool = False) \
-            -> 'PropertyObject':
-        new_cls = super(PropertyObject, cls)
+            -> 'PropertyBaseObject':
+        new_cls = super(PropertyBaseObject, cls)
         ins = new_cls.__new__(cls, data, force_new=force_new)  # type: ignore
         return ins
 
@@ -81,7 +81,7 @@ class PropertyObject(NotionObject):
         super().__init__(data)
 
 
-class PagePropertyObject(PropertyObject):
+class PagePropertyObject(PropertyBaseObject):
     """
     Basic Object for Data and Page Properties.
     """
@@ -122,7 +122,7 @@ class PagePropertyObject(PropertyObject):
             return value
 
 
-class DbPropertyObject(PropertyObject):
+class DbPropertyObject(PropertyBaseObject):
     """
     Basic Object for Data and Page Properties.
     """

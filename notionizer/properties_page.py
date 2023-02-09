@@ -2,7 +2,7 @@ from notionizer.functions import from_rich_text_array_to_plain_text
 from notionizer.functions import parse_date_object
 from notionizer.object_adt import MutableProperty
 from notionizer.properties_basic import PagePropertyObject
-from notionizer.object_basic import UserObject
+from notionizer.object_basic import UserBaseObject
 from typing import Any, Dict, List
 
 
@@ -83,10 +83,10 @@ class PagePropertyPeople(PagePropertyObject):
         :param force_new:
         """
 
-        user_list: List[UserObject] = list()
+        user_list: List[UserBaseObject] = list()
         object_list: List[Dict[str, Any]] = data['people']
         for e in object_list:
-            user_list.append(UserObject(e))
+            user_list.append(UserBaseObject(e))
         data['people'] = user_list
         super().__init__(parent, data, parent_type, name)
 

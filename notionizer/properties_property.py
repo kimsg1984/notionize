@@ -1,6 +1,6 @@
 from notionizer.object_adt import DictionaryObject, ImmutableProperty
 from notionizer.object_basic import _log
-from notionizer.properties_basic import PropertyObject, PagePropertyObject, DbPropertyObject
+from notionizer.properties_basic import PropertyBaseObject, PagePropertyObject, DbPropertyObject
 
 import notionizer.properties_page
 import notionizer.properties_db
@@ -76,8 +76,8 @@ class PropertiesProperty(DictionaryObject, ImmutableProperty):
 
             if property_type in properties_mapper:
 
-                property_cls: PropertyObject = properties_mapper.get(property_type)
-                property_ins: PropertyObject = property_cls(self, v, parent_type=self._parent_object_type, name=k)
+                property_cls: PropertyBaseObject = properties_mapper.get(property_type)
+                property_ins: PropertyBaseObject = property_cls(self, v, parent_type=self._parent_object_type, name=k)
             else:
                 if self._parent_object_type == 'database':
                     property_ins: DbPropertyObject = DbPropertyObject(self, v, parent_type=self._parent_object_type,

@@ -16,11 +16,11 @@ notion_object_class: Dict[str, Any] = {}
 def create_notion_object_class(cls: Any, mro_tuple: Optional[Tuple[Any]] = None,
                                namespace: Optional[Dict[str, Any]] = None, force_new: bool = False) -> Any:
     """
-    Create new 'NotionObject' class. Check the name of 'cls'. If not exist,
-    create and return. After created, the 'NotionObject' has own descriptors. If exists, returns already created one
+    Create new 'NotionBaseObject' class. Check the name of 'cls'. If not exist,
+    create and return. After created, the 'NotionBaseObject' has own descriptors. If exists, returns already created one
     with descriptors assigned.
 
-    :param cls: 'NotionObject' itself or 'subclass' of it.
+    :param cls: 'NotionBaseObject' itself or 'subclass' of it.
     :param mro_tuple: if it is defined, replace this.
     :param namespace: if it is defined, replace this.
     :param force_new: if True, generate new object even it exists.
@@ -44,14 +44,14 @@ def create_notion_object_class(cls: Any, mro_tuple: Optional[Tuple[Any]] = None,
     return new_cls
 
 
-class NotionObject(object):
+class NotionBaseObject(object):
     """
-    '_NotionObject' which set properties as 'descriptor' or 'specific object' and assigns value.
+    'NotionBaseObject' set properties as 'descriptor' or 'specific object' and assigns value.
     """
 
-    def __new__(cls, data: Dict[str, Any], force_new: bool = False) -> 'NotionObject':
+    def __new__(cls, data: Dict[str, Any], force_new: bool = False) -> 'NotionBaseObject':
         """
-        construct '_NotionObject' class.
+        construct 'NotionBaseObject' class.
 
         before assign the object and property, '__new__' method set the proper descriptors.
         :param data:
@@ -63,8 +63,8 @@ class NotionObject(object):
             if k not in dir(new_cls):
                 set_proper_descriptor(new_cls, k, v)
 
-        super_cls = super(NotionObject, new_cls)
-        notion_ins: 'NotionObject' = super_cls.__new__(new_cls)
+        super_cls = super(NotionBaseObject, new_cls)
+        notion_ins: 'NotionBaseObject' = super_cls.__new__(new_cls)
         return notion_ins
 
     def __init__(self, data: Dict[str, Any], *args: List[Any]):
@@ -83,7 +83,7 @@ class NotionObject(object):
         return f"<'{self.__class__.__name__}' at {hex(id(self))}>"
 
 
-class UserObject(NotionObject):
+class UserBaseObject(NotionBaseObject):
     """
     User Object.
     """

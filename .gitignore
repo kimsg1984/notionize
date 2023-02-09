@@ -10,3 +10,4 @@ notionizer.egg-info
 **/setting.py
 /venv/
 setting
+.mymy*
