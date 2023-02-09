@@ -12,6 +12,7 @@ from notionizer.http_request import HttpRequest
 from notionizer.objects import Database
 from notionizer.objects import Page
 from notionizer.objects import User
+from notionizer.objects import Block
 
 
 class Notion:
@@ -80,6 +81,7 @@ class Notion:
 
         return me
 
-    def get_block(self, block_id: str):
-        raise NotImplementedError
+    def get_block(self, block_id: str) -> Block:
+        block: Block = Block(*self._request.get('v1/block/' + block_id))
+        return block
 
