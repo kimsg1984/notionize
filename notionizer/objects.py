@@ -11,7 +11,7 @@ Fallow rules make python object safety from user assignment event.
 - Only mutable properties defined 'in class' manually as 'MutableProperty' descriptor.
 - Other properties are defined 'Immutable Property' dynamically.
 - Some properties has own 'object' and 'array', which in python are 'dictionay' and 'list'. It's
-  replace as '_DictionaryObject' and '_ListObject'. These are 'immutable' as default. But 'mutable' parameter makes
+  replace as 'DictionaryObject' and 'ListObject'. These are 'immutable' as default. But 'mutable' parameter makes
   these 'mutable' object.
 
 """

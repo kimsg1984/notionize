@@ -52,7 +52,7 @@ class DictionaryObject(MutableMapping[str, Any]):
 
     def __init__(self, name: str, owner: Any = None, data: Optional[Dict[str, Any]] = None, mutable: bool = False):
         """
-        Initilize '_DictionaryObject'.
+        Initilize 'DictionaryObject'.
 
         :param name: str (property name)
         :param owner: NotionBaseObject (other name is parent)
@@ -114,7 +114,7 @@ class DictionaryObject(MutableMapping[str, Any]):
             self._mutable = mutable_status
         else:
             _log.debug(f"{self.name}, {owner}, {self._data}")
-            raise NotionApiPropertyException(f"values of '_DictionaryObject' already assigned")
+            raise NotionApiPropertyException(f"values of 'DictionaryObject' already assigned")
 
     # Implement MutableMapping method
     def __getitem__(self, key):
