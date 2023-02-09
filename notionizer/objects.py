@@ -44,7 +44,7 @@ from typing import Set
 _log = __import__('logging').getLogger(__name__)
 
 
-class NotionUpdateBaseObject(NotionBaseObject):
+class NotionUpdateObject(NotionBaseObject):
     """
     'NotionUpdateObject' overrides '_update' method for updating and refreshing itself.
     """
@@ -54,7 +54,7 @@ class NotionUpdateBaseObject(NotionBaseObject):
     id: ImmutableProperty
 
     def __new__(cls, request: HttpRequest, data: Dict[str, Any], instance_id: Optional[str] = None
-                , **kwargs) -> 'NotionUpdateBaseObject':
+                , **kwargs) -> 'NotionUpdateObject':
         """
         construct 'NotionUpdateObject' class.
 
@@ -65,14 +65,14 @@ class NotionUpdateBaseObject(NotionBaseObject):
         """
 
         _log.debug(" ".join(map(str, ('NotionUpdateObject:', cls))))
-        instance: 'NotionUpdateBaseObject' = super(NotionUpdateBaseObject, cls).__new__(cls, data)  # type: ignore
+        instance: 'NotionUpdateObject' = super(NotionUpdateObject, cls).__new__(cls, data)  # type: ignore
 
         # assign 'new namespace' with 'unassigned descriptors'.
         if instance_id:
-            NotionUpdateBaseObject._instances[instance_id].__dict__ = instance.__dict__
+            NotionUpdateObject._instances[instance_id].__dict__ = instance.__dict__
         else:
             instance_id = str(data['id'])
-            NotionUpdateBaseObject._instances[instance_id] = instance
+            NotionUpdateObject._instances[instance_id] = instance
 
         return instance
 
@@ -91,7 +91,7 @@ class NotionUpdateBaseObject(NotionBaseObject):
         url = self._api_url + str(self.id)
         request, data = self._request.patch(url, {property_name: contents})
         # update property of object using 'id' value.
-        cls: type(NotionUpdateBaseObject) = type(self)  # type: ignore
+        cls: type(NotionUpdateObject) = type(self)  # type: ignore
         # update instance
         cls(request, data, instance_id=str(data['id']))
 
@@ -168,7 +168,7 @@ User objects appear in the API in nearly all objects returned by the API, includ
 """
 
 
-class User(NotionUpdateBaseObject, UserBaseObject):
+class User(NotionUpdateObject, UserBaseObject):
     """
     User Object
     """
@@ -203,12 +203,12 @@ class UserProperty(ImmutableProperty):
     User Property for Database, Page: 'created_by' and 'last_edited_by'
     """
 
-    def __set__(self, owner: NotionUpdateBaseObject, value: Dict[str, Any]) -> None:
+    def __set__(self, owner: NotionUpdateObject, value: Dict[str, Any]) -> None:
         obj = User(owner._request, value)
         super().__set__(owner, obj)
 
 
-class Database(NotionUpdateBaseObject):
+class Database(NotionUpdateObject):
 
     _api_url = 'v1/databases/'
 
@@ -406,7 +406,7 @@ class Database(NotionUpdateBaseObject):
         return Page(*self._request.post(url, payload))
 
 
-class Page(NotionUpdateBaseObject):
+class Page(NotionUpdateObject):
     """
     Page Object
     """
