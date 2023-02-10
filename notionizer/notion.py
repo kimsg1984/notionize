@@ -82,6 +82,8 @@ class Notion:
         return me
 
     def get_block(self, block_id: str) -> Block:
-        block: Block = Block(*self._request.get('v1/block/' + block_id))
+        block: Block = Block(*self._request.get('v1/blocks/' + block_id))
+        if block.has_children == True:
+            block: Block = Block(*self._request.get('v1/blocks/' + block_id + "/children"))
         return block
 
