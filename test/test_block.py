@@ -26,14 +26,31 @@ notion_api_key = setting.notion_api_key
 from notionizer import Notion
 # print(notion_api_key)
 
-def view_without_speacial_method(item):
+def view_without_speacial_method(func):
 
-#     a = []
-    for item in dir(item):
-        if not item.startswith('__') and not item.startswith('_'):
-#             a.append(item)
-            print(item)
-#     print(a)
+   """
+    A function that filters and displays the attributes and methods of an object, excluding those that start with double underscores (`__`) or single underscores (`_`).
+
+    Parameters:
+    func (method): The object for which you want to display the attributes and methods.
+
+    Returns:
+    None
+
+    Example:
+    >>> class Example:
+    ...     def method1(self):
+    ...         pass
+    ...     def __method2(self):
+    ...         pass
+    ...
+    >>> obj = Example()
+    >>> view_without_special_method(obj)
+    method1
+    """
+    for func in dir(func):
+        if not func.startswith('__') and not func.startswith('_'):
+            print(func)
 def wm(item):
     view_without_speacial_method(item)
 

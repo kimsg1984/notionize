@@ -71,6 +71,7 @@ class NotionUpdateObject(NotionBaseObject):
         if instance_id:
             NotionUpdateObject._instances[instance_id].__dict__ = instance.__dict__
         else:
+            print(data)
             instance_id = str(data['id'])
             NotionUpdateObject._instances[instance_id] = instance
 

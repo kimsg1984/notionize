@@ -174,3 +174,6 @@ def set_proper_descriptor(cls: Any, key: str, value: Any) -> None:
     else:
         raise NotionApiPropertyException(f"could not assign proper descriptor: '{type(value)}'")
 
+
+# class Listblock(ListObject):
+#     pass
