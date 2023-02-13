@@ -7,8 +7,8 @@ from notionizer import OptionColor
 # log_format = '%(lineno)s|%(levelname)s] %(funcName)s(): %(message)s'
 log_format = '%(asctime)s [%(filename)s:%(lineno)s|%(levelname)s] %(funcName)s(): %(message)s'
 
-# logging.basicConfig(format=log_format, level=logging.ERROR)
-logging.basicConfig(format=log_format, level=logging.INFO)
+logging.basicConfig(format=log_format, level=logging.ERROR)
+# logging.basicConfig(format=log_format, level=logging.INFO)
 # logging.basicConfig(format=log_format, level=logging.DEBUG)
 # logging.basicConfig(format=log_format, level=logging.WARN)
 
@@ -16,19 +16,19 @@ log = logging.getLogger(__name__)
 import traceback
 
 from unittest import TestCase
-from query import sorts
-import query
-from query import filter
-# from query import query_by_expression
-from query import filter_text
-from query import filter_rollup
-import notionized.notion
+from notionizer.query import sorts
+from notionizer import query
+from notionizer.query import filter
+# from notionizer.query import query_by_expression
+from notionizer.query import filter_text
+from notionizer.query import filter_rollup
+import notionizer.notion
 import pandas as pd
 from pprint import pprint
 
 from typing import List
 from typing import Dict
-from functions import pdir
+
 
 from setting import setting
 
@@ -37,7 +37,7 @@ test_table_id = setting.test_table_id
 filter_table_id = setting.filter_table_id
 table_id = setting.table_id
 
-notion = notionized.notion.Notion(notion_api_key)
+notion = notionizer.notion.Notion(notion_api_key)
 test_table = notion.get_database(test_table_id)
 
 datetime_case = ['2022-03-23', '2022-03-24', '2022-03-25', '2022-03-26',
