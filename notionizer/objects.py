@@ -16,22 +16,14 @@ Fallow rules make python object safety from user assignment event.
 
 """
 
-from notionizer.http_request import HttpRequest
-
-from notionizer.object_basic import NotionBaseObject
-from notionizer.object_basic import UserBaseObject
-from notionizer.object_adt import DictionaryObject
-from notionizer.properties_property import PropertiesProperty
-from notionizer.functions import notion_object_init_handler
-from notionizer.functions import from_plain_text_to_rich_text_array
-from notionizer.properties_basic import TitleProperty, DbPropertyObject
-from notionizer.object_adt import ImmutableProperty, MutableProperty
-from notionizer.properties_db import DbPropertyRelation
-
-from notionizer.query import Query
-from notionizer.query import filter
-from notionizer.query import T_Filter
-from notionizer.query import T_Sorts
+import notionizer.http_request
+import notionizer.object_basic
+import notionizer.object_adt
+import notionizer.properties_property
+import notionizer.functions
+import notionizer.properties_basic
+import notionizer.properties_db
+import notionizer.query
 
 from typing import Optional
 from typing import Any
@@ -39,6 +31,25 @@ from typing import Dict
 from typing import List
 from typing import Union
 from typing import Set
+
+Query = notionizer.query.Query
+filter = notionizer.query.filter
+T_Filter = notionizer.query.T_Filter
+T_Sorts = notionizer.query.T_Sorts
+
+HttpRequest = notionizer.http_request.HttpRequest
+NotionBaseObject = notionizer.object_basic.NotionBaseObject
+UserBaseObject = notionizer.object_basic.UserBaseObject
+DictionaryObject = notionizer.object_adt.DictionaryObject
+ImmutableProperty = notionizer.object_adt.ImmutableProperty
+MutableProperty = notionizer.object_adt.MutableProperty
+PropertiesProperty = notionizer.properties_property.PropertiesProperty
+notion_object_init_handler = notionizer.functions.notion_object_init_handler
+from_plain_text_to_rich_text_array = notionizer.functions.from_plain_text_to_rich_text_array
+DbPropertyObject = notionizer.properties_basic.DbPropertyObject
+TitleProperty = notionizer.properties_basic.TitleProperty
+DbPropertyRelation = notionizer.properties_db.DbPropertyRelation
+
 
 
 _log = __import__('logging').getLogger(__name__)
