@@ -4,9 +4,8 @@
 
 import logging
 
+import notionizer
 from notionizer import OptionColor
-
-
 
 # log_format = '%(lineno)s|%(levelname)s] %(funcName)s(): %(message)s'
 log_format = '%(asctime)s [%(filename)s:%(lineno)s|%(levelname)s] %(funcName)s(): %(message)s'
@@ -16,6 +15,8 @@ log_format = '%(asctime)s [%(filename)s:%(lineno)s|%(levelname)s] %(funcName)s()
 logging.basicConfig(format=log_format, level=logging.DEBUG)
 
 log = logging.getLogger(__name__)
+
+log.setLevel(logging.DEBUG)
 
 from setting import setting
 from pprint import pprint
@@ -49,7 +50,18 @@ me = notion.get_me()
 # print("type : ",me.type)
 # print(type(me.type))
 
-db = notion.get_block("e9e16d48ba3f4755b81df1bd966c5fba")
+# log = notionize.notion._log
+# # log.setLevel(logging.DEBUG)
+# log.debug('test')
+
+
+
+_log = notionizer.notion._log
+_log.setLevel(logging.DEBUG)
+
+# db = notion.get_block("e9e16d48ba3f4755b81df1bd966c5fba")
+db = notion.get_block("82bc482790284b3bac8fac1560651fec")
+
 # db = notion.get_block("b809926ac85d4d2da79d02071b761b18")
 # print(dir(db))
 # wm(db)
