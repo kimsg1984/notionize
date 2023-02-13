@@ -32,6 +32,14 @@ from typing import List
 from typing import Union
 from typing import Set
 
+# import notionizer.object_page
+
+from notionizer.object_page import Page
+
+
+ImmutableProperty = notionizer.object_adt.ImmutableProperty
+UserProperty = notionizer.object_user.UserProperty
+# Page = notionizer.object_page.Page
 Query = notionizer.query.Query
 filter = notionizer.query.filter
 T_Filter = notionizer.query.T_Filter
@@ -39,9 +47,9 @@ T_Sorts = notionizer.query.T_Sorts
 
 HttpRequest = notionizer.http_request.HttpRequest
 NotionBaseObject = notionizer.object_basic.NotionBaseObject
+NotionUpdateObject = notionizer.object_basic.NotionUpdateObject
 UserBaseObject = notionizer.object_basic.UserBaseObject
 DictionaryObject = notionizer.object_adt.DictionaryObject
-ImmutableProperty = notionizer.object_adt.ImmutableProperty
 MutableProperty = notionizer.object_adt.MutableProperty
 PropertiesProperty = notionizer.properties_property.PropertiesProperty
 notion_object_init_handler = notionizer.functions.notion_object_init_handler
@@ -50,62 +58,7 @@ DbPropertyObject = notionizer.properties_basic.DbPropertyObject
 TitleProperty = notionizer.properties_basic.TitleProperty
 DbPropertyRelation = notionizer.properties_db.DbPropertyRelation
 
-
-
 _log = __import__('logging').getLogger(__name__)
-
-
-class NotionUpdateObject(NotionBaseObject):
-    """
-    'NotionUpdateObject' overrides '_update' method for updating and refreshing itself.
-    """
-    _instances: Dict[str, Any] = {}
-
-    _api_url: str
-    id: ImmutableProperty
-
-    def __new__(cls, request: HttpRequest, data: Dict[str, Any], instance_id: Optional[str] = None
-                , **kwargs) -> 'NotionUpdateObject':
-        """
-        construct 'NotionUpdateObject' class.
-
-        check 'key' value and if instance is exist, reuse instance with renewed namespace.
-        :param request:
-        :param data:
-        :param instance_id:
-        """
-
-        _log.debug(" ".join(map(str, ('NotionUpdateObject:', cls))))
-        instance: 'NotionUpdateObject' = super(NotionUpdateObject, cls).__new__(cls, data)  # type: ignore
-
-        # assign 'new namespace' with 'unassigned descriptors'.
-        if instance_id:
-            NotionUpdateObject._instances[instance_id].__dict__ = instance.__dict__
-        else:
-            print(data)
-            instance_id = str(data['id'])
-            NotionUpdateObject._instances[instance_id] = instance
-
-        return instance
-
-    def __init__(self, request: HttpRequest, data: Dict[str, Any], instance_id: Optional[str] = None):
-        """
-
-        :param request:
-        :param data:
-        :param instance_id:
-        """
-        _log.debug(" ".join(map(str, ('NotionUpdateObject:', self))))
-        self._request: HttpRequest = request
-        super().__init__(data)
-
-    def _update(self, property_name: str, contents: Dict[str, Any]) -> None:
-        url = self._api_url + str(self.id)
-        request, data = self._request.patch(url, {property_name: contents})
-        # update property of object using 'id' value.
-        cls: type(NotionUpdateObject) = type(self)  # type: ignore
-        # update instance
-        cls(request, data, instance_id=str(data['id']))
 
 
 class QueriedPageIterator:
@@ -178,46 +131,6 @@ User objects appear in the API in nearly all objects returned by the API, includ
 [ ] 'Block' object under created_by and last_edited_by.
 [ ] 'Rich text' object, as user mentions.
 """
-
-
-class User(NotionUpdateObject, UserBaseObject):
-    """
-    User Object
-    """
-    _api_url = 'v1/users/'
-
-    @notion_object_init_handler
-    def __init__(self, request: HttpRequest, data: Dict[str, Any]):
-        """
-
-        :param request:
-        :param data:
-        """
-        self._update_event_status = False
-        super().__init__(request, data)
-
-    def update_info(self) -> None:
-        """
-        get all information of user. If already updated, stop and doesn't make request event.
-        :return: None
-        """
-        if self._update_event_status:
-            return
-
-        url = self._api_url + str(self.id)
-        request, data = self._request.get(url)
-        _log.debug(f"{type(self).__init__}")
-        type(self)(request, data, instance_id=data['id'])
-
-
-class UserProperty(ImmutableProperty):
-    """
-    User Property for Database, Page: 'created_by' and 'last_edited_by'
-    """
-
-    def __set__(self, owner: NotionUpdateObject, value: Dict[str, Any]) -> None:
-        obj = User(owner._request, value)
-        super().__set__(owner, obj)
 
 
 class Database(NotionUpdateObject):
@@ -416,138 +329,6 @@ class Database(NotionUpdateObject):
                 payload['properties'][key] = value_converted
 
         return Page(*self._request.post(url, payload))
-
-
-class Page(NotionUpdateObject):
-    """
-    Page Object
-    """
-    properties = PropertiesProperty(object_type='page')
-    id = ImmutableProperty()
-    created_by = UserProperty()
-    last_edited_by = UserProperty()
-
-    _api_url = 'v1/pages/'
-
-    @notion_object_init_handler
-    def __init__(self, request: HttpRequest, data: Dict[str, Any]):
-
-        """
-
-        Args:
-            request: Notion._request
-            data: returned from ._request
-        """
-
-        object_type = data['object']
-        assert object_type == 'page', f"data type is not 'database'. (type: {object_type})"
-        super().__init__(request, data)
-
-    def __repr__(self) -> str:
-        return f"<Page at '{self.id}'>"
-
-    def get_properties(self) -> Dict[str, Any]:
-        """
-        return value of properties simply
-        :return: {'key' : value, ...}
-        """
-        result = dict()
-        for k, v in self.properties.items():
-            result[k] = v.get_value()
-
-        return result
-
-
-    def create_database(self,
-                        title: str = '',
-                        emoji: str = '',
-                        cover: str = '',
-                        parent: str = '',
-                        properties: list = []
-                        ) -> Database:
-
-        """
-
-        :param title:
-        :param emoji:
-        :param cover:
-        :param parent:
-        :param properties:
-        :return: Database
-
-        [Usage]
-
-        from notionizer import Property as Prop
-        from notionizer import NumberFormat as NumForm
-        from notionizer import OptionColor as OptColor
-
-        db = page.create_database(
-            title='DB Title',
-            emoji="🎉",
-            cover="https://web.image.path/image.jpg",
-            properties
-
-            notion.create_database("title", properties = [
-                Prop.RichText("text filed"),
-                Prop.Number("number", format = NumForm.dollar),
-                Prop.Select("select", option = {'opt1': OptColor.blue, 'opt2': OptColor.red}),
-                Prop.MultiSelect("multi select", option = {'opt1': OptColor.blue, 'opt2': OptColor.red}),
-                ...
-                ]
-            )
-        )
-
-        """
-
-        data: Dict[str, Any] = {'parent': {'type': 'page_id'}, 'properties': {}}
-        if parent:
-            data['parent']['page_id'] = parent
-        else:
-            data['parent']['page_id'] = self.id
-
-        if title:
-            data['title'] = from_plain_text_to_rich_text_array(title)
-
-        if emoji:
-            data['icon'] = {'type': 'emoji'}
-            data['icon']['emoji'] = emoji
-
-        if cover:
-            data['cover'] = {'type': 'external'}
-            data['cover']['external'] = {'url': cover}
-
-        # properties validation
-        prop_names = sorted(p.name for p in properties)
-        prop_types = sorted(p.prop_type for p in properties)
-        assert len(properties) == len(set(prop_names)), f"please check duplicated name of property: {str(prop_names)}"
-
-        # title property should be included.
-        if 'title' not in prop_types:
-            default_name = 'Name'
-            unused_name = default_name
-            index = 0
-            while unused_name in prop_names:
-                index += 1
-                unused_name = default_name + str(index).zfill(2)
-
-            data['properties'][unused_name] = {"title": {}}
-
-        for p in properties:
-            data['properties'][p.name] = {p.prop_type: {}}
-
-            for opt in p.arguments.keys():
-                if opt == 'options':
-                    data['properties'][p.name][p.prop_type]['options'] = []
-                    for name, color in p.arguments[opt].items():
-                        data['properties'][p.name][p.prop_type]['options'].append({'name': name, 'color': color})
-                else:
-                    data['properties'][p.name][p.prop_type][opt] = p.arguments[opt]
-
-        db_object: Database = Database(*self._request.post('v1/databases/', data))
-        return db_object
-
-class Block(NotionUpdateObject):
-    pass
 
 
 class Property:

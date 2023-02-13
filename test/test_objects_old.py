@@ -10,9 +10,8 @@ logging.basicConfig(format=log_format, level=logging.INFO)
 
 import notionizer.notion
 from notionizer.objects import Database
-from notionizer.objects import Page
+from notionizer import Page, User
 # from notionizer.objects import UserObject
-from notionizer.objects import User
 from notionizer.functions import pdir
 from notionizer.query import sorts
 from notionizer.query import sort_by_timestamp

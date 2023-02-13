@@ -10,9 +10,9 @@ _logging.basicConfig(format='%(asctime)s [%(filename)s:%(lineno)s|%(levelname)s]
 
 from notionizer.http_request import HttpRequest
 from notionizer.objects import Database
-from notionizer.objects import Page
-from notionizer.objects import User
-from notionizer.objects import Block
+from notionizer.object_page import Page
+from notionizer.object_user import User
+from notionizer.object_block import Block
 
 
 class Notion:

@@ -3,10 +3,9 @@
 
 from .notion import Notion
 
-from .objects import User
-from .objects import UserProperty
+from .object_user import UserProperty, User
 from .objects import Database
-from .objects import Page
+from .object_page import Page
 from .objects import Property
 from .enum import OptionColor, NumberFormat, RollupFunction
 

@@ -175,5 +175,58 @@ def set_proper_descriptor(cls: Any, key: str, value: Any) -> None:
         raise NotionApiPropertyException(f"could not assign proper descriptor: '{type(value)}'")
 
 
+class NotionUpdateObject(NotionBaseObject):
+    """
+    'NotionUpdateObject' overrides '_update' method for updating and refreshing itself.
+    """
+    _instances: Dict[str, Any] = {}
+
+    _api_url: str
+    id: ImmutableProperty
+
+    def __new__(cls, request: HttpRequest, data: Dict[str, Any], instance_id: Optional[str] = None
+                , **kwargs) -> 'NotionUpdateObject':
+        """
+        construct 'NotionUpdateObject' class.
+
+        check 'key' value and if instance is exist, reuse instance with renewed namespace.
+        :param request:
+        :param data:
+        :param instance_id:
+        """
+
+        _log.debug(" ".join(map(str, ('NotionUpdateObject:', cls))))
+        instance: 'NotionUpdateObject' = super(NotionUpdateObject, cls).__new__(cls, data)  # type: ignore
+
+        # assign 'new namespace' with 'unassigned descriptors'.
+        if instance_id:
+            NotionUpdateObject._instances[instance_id].__dict__ = instance.__dict__
+        else:
+            print(data)
+            instance_id = str(data['id'])
+            NotionUpdateObject._instances[instance_id] = instance
+
+        return instance
+
+    def __init__(self, request: HttpRequest, data: Dict[str, Any], instance_id: Optional[str] = None):
+        """
+
+        :param request:
+        :param data:
+        :param instance_id:
+        """
+        _log.debug(" ".join(map(str, ('NotionUpdateObject:', self))))
+        self._request: HttpRequest = request
+        super().__init__(data)
+
+    def _update(self, property_name: str, contents: Dict[str, Any]) -> None:
+        url = self._api_url + str(self.id)
+        request, data = self._request.patch(url, {property_name: contents})
+        # update property of object using 'id' value.
+        cls: type(NotionUpdateObject) = type(self)  # type: ignore
+        # update instance
+        cls(request, data, instance_id=str(data['id']))
+
+
 # class Listblock(ListObject):
 #     pass
